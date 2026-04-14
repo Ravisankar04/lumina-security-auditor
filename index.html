@@ -1478,9 +1478,15 @@
       addLog(`[Pipeline Complete] ${msg.vulnerabilities_found || 0} vulns | ${msg.fixes_applied || 0} fixes`, 'success');
       document.getElementById('progressStatus').textContent = 'COMPLETE';
 
-      // Render structured report
+      // Render structured report with error handling
       if (report) {
-        renderReport(report);
+        try {
+          renderReport(report);
+          addLog('[Debug] Report rendered successfully', 'success');
+        } catch (e) {
+          console.error("Report rendering failed:", e);
+          addLog(`[Error] Failed to render report details: ${e.message}`, 'error');
+        }
       }
 
       // Store PR data and show "Create Pull Request" button
@@ -1540,9 +1546,13 @@
     const arch      = report.architecture || {};
 
     // Header counts
-    document.getElementById('reportVulnCount').textContent = vulns.length;
-    document.getElementById('reportFixCount').textContent  = fixes.length;
-    document.getElementById('reportFileCount').textContent = report.files_scanned || 0;
+    const volnCountEl = document.getElementById('reportVulnCount');
+    const fixCountEl = document.getElementById('reportFixCount');
+    const fileCountEl = document.getElementById('reportFileCount');
+    
+    if (volnCountEl) volnCountEl.textContent = vulns.length;
+    if (fixCountEl) fixCountEl.textContent  = fixes.length;
+    if (fileCountEl) fileCountEl.textContent = report.files_scanned || 0;
 
     // Summary cards
     const severityCounts = {};

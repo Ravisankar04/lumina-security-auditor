@@ -152,7 +152,7 @@ async def event_generator(repo_url: str):
     pr_link = f"{repo_url.rstrip('/')}/pull/88"
     # 1. Start Signal
     yield f"data: {json.dumps({'type': 'log', 'message': 'LUMINA engine v2.0.3 connected. Initializing audit sequence...'})}\n\n"
-    await asyncio.sleep(1)
+    await asyncio.sleep(0.5)
 
     stages = [
         ("crawl", "Crawling Repository", ["Parsing GitHub file tree...", "Analyzing dependency manifests...", "Ingestion complete. Found 84 files."]),
@@ -165,14 +165,14 @@ async def event_generator(repo_url: str):
 
     for stage_key, stage_title, logs in stages:
         yield f"data: {json.dumps({'type': 'stage_start', 'stage': stage_key, 'message': stage_title})}\n\n"
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(0.2)
         for log in logs:
             msg = log
             if "[PR]" in log: msg = f"PR ready: {pr_link}"
             yield f"data: {json.dumps({'type': 'log', 'message': msg})}\n\n"
-            await asyncio.sleep(0.6)
+            await asyncio.sleep(0.3)
         yield f"data: {json.dumps({'type': 'stage_done', 'stage': stage_key})}\n\n"
-        await asyncio.sleep(0.3)
+        await asyncio.sleep(0.1)
 
     report_data = {
         "type": "complete",
