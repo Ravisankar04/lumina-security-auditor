@@ -100,7 +100,11 @@ async def hero_image():
         path = FRONTEND_DIR / name
         if path.exists():
             return FileResponse(str(path))
-    raise HTTPException(status_code=404, detail="Hero image not found")
+    
+    # Fallback to a high-quality AI-themed placeholder if local assets are missing on Vercel
+    return RedirectResponse(
+        url="https://images.unsplash.com/photo-1639322537228-f710d846310a?q=80&w=2070&auto=format&fit=crop"
+    )
 
 # ────────────────────────────────────────────────
 # Pydantic Models
