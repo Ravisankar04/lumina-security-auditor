@@ -125,6 +125,7 @@ async def hero_image():
         url="https://images.unsplash.com/photo-1639322537228-f710d846310a?q=80&w=2070&auto=format&fit=crop"
     )
 
+
 # ────────────────────────────────────────────────
 # Pydantic Models
 # ────────────────────────────────────────────────

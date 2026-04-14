@@ -103,11 +103,11 @@ Navigate to: `http://localhost:8000`
 Events emitted during pipeline execution:
 
 ```json
-{\"type\": \"stage_start\", \"stage\": \"crawl\", \"message\": \"...\"}
-{\"type\": \"log\", \"message\": \"...\"}
-{\"type\": \"stage_done\", \"stage\": \"crawl\"}
-{\"type\": \"complete\", \"pr_url\": \"https://github.com/.../pull/42\"}
-{\"type\": \"error\", \"error\": \"...\"}
+{"type": "stage_start", "stage": "crawl", "message": "..."}
+{"type": "log", "message": "..."}
+{"type": "stage_done", "stage": "crawl"}
+{"type": "complete", "pr_url": "https://github.com/.../pull/42"}
+{"type": "error", "error": "..."}
 ```
 
 ---

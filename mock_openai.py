@@ -75,5 +75,5 @@ class AsyncOpenAI:
         self.embeddings = MockEmbeddings()
         class MockChat:
             def __init__(self):
-                self.chat = MockChatCompletions()
+                self.completions = MockChatCompletions()
         self.chat = MockChat()
