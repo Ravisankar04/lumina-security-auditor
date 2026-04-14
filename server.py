@@ -159,22 +159,24 @@ async def event_generator(repo_url: str):
         ("architecture", "Logic Mapping", ["Mapping data flows...", "Identifying authentication boundaries...", "Architecture graph synthesized."]),
         ("scan", "Vulnerability Scan", ["Running hybrid security scan...", "Phase 1: Pattern matching complete.", "Phase 2: LLM verification in progress...", "Vulnerabilities confirmed."]),
         ("fix", "Fix Synthesis", ["Synthesizing remediation code...", "Generating security wrappers...", "Patches validated."]),
-        ("pr", "Pull Request", ["Branching from main...", "Applying 3 security patches...", "Opening Pull Request..."]),
+        ("pr", "Pull Request", ["Branching from main...", "Applying 3 security patches...", "[PR]"]),
     ]
 
     for stage_key, stage_title, logs in stages:
         yield f"data: {json.dumps({'type': 'stage_start', 'stage': stage_key, 'message': stage_title})}\n\n"
         await asyncio.sleep(0.5)
         for log in logs:
-            yield f"data: {json.dumps({'type': 'log', 'message': log})}\n\n"
+            msg = log
+            if "[PR]" in log: msg = f"PR ready: {pr_link}"
+            yield f"data: {json.dumps({'type': 'log', 'message': msg})}\n\n"
             await asyncio.sleep(0.6)
         yield f"data: {json.dumps({'type': 'stage_done', 'stage': stage_key})}\n\n"
         await asyncio.sleep(0.3)
 
-    # Final Report
+    pr_link = f"{repo_url.rstrip('/')}/pull/88"
     report_data = {
         "type": "complete",
-        "pr_url": "https://github.com/demo-lumina/security-patches/pull/88",
+        "pr_url": pr_link,
         "message": "Analysis session complete. Security vulnerabilities successfully mitigated.",
         "vulnerabilities_found": 3,
         "fixes_applied": 3,
