@@ -13,6 +13,7 @@ from typing import Dict, Optional
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -58,6 +59,18 @@ logger = logging.getLogger("lumina")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("LUMINA v2.0 starting up...")
+    
+    # Check for critical environment variables
+    missing = []
+    if not os.environ.get("GITHUB_CLIENT_ID"): missing.append("GITHUB_CLIENT_ID")
+    if not os.environ.get("GITHUB_CLIENT_SECRET"): missing.append("GITHUB_CLIENT_SECRET")
+    
+    if missing:
+        logger.error(f"CRITICAL: Missing environment variables: {', '.join(missing)}")
+        logger.error("OAuth login will fail until these are set in Vercel/local .env")
+    else:
+        logger.info("GitHub OAuth credentials detected.")
+        
     yield
     logger.info("LUMINA shutting down.")
 
@@ -65,6 +78,15 @@ app = FastAPI(
     title="LUMINA — Autonomous AI Security Auditor",
     version="2.0.0",
     lifespan=lifespan,
+)
+
+# Vercel-friendly entry point
+application = app
+
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=SECRET_KEY,
+    session_cookie="lumina_session_v2",
 )
 
 app.add_middleware(
@@ -97,7 +119,12 @@ async def hero_image():
         path = FRONTEND_DIR / name
         if path.exists():
             return FileResponse(str(path))
-    raise HTTPException(status_code=404, detail="Hero image not found")
+    
+    # Fallback to a high-quality AI-themed placeholder if local assets are missing on Vercel
+    return RedirectResponse(
+        url="https://images.unsplash.com/photo-1639322537228-f710d846310a?q=80&w=2070&auto=format&fit=crop"
+    )
+
 
 # ────────────────────────────────────────────────
 # Pydantic Models
@@ -113,11 +140,26 @@ class AnalyzeRequest(BaseModel):
 @app.get("/api/auth/login")
 async def login(request: Request):
     """Initiate GitHub OAuth flow."""
+    client_id = os.environ.get('GITHUB_CLIENT_ID')
+    if not client_id or client_id.startswith("your_"):
+        return JSONResponse(
+            status_code=400,
+            content={"error": "Missing Configuration", "detail": "GITHUB_CLIENT_ID is not configured on the server."}
+        )
+
     redirect_uri = str(request.url_for('auth_callback'))
     # In Vercel, sometimes url_for returns http instead of https
     if "vercel.app" in redirect_uri:
         redirect_uri = redirect_uri.replace("http://", "https://")
-    return await oauth.github.authorize_redirect(request, redirect_uri)
+    
+    try:
+        return await oauth.github.authorize_redirect(request, redirect_uri)
+    except Exception as e:
+        logger.error(f"Login redirect failed: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"error": "OAuth Error", "detail": str(e)}
+        )
 
 @app.get("/api/auth/callback")
 async def auth_callback(request: Request):

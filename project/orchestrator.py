@@ -177,7 +177,8 @@ async def _build_index(files: List[Dict], namespace: str, emit: EmitFn) -> str:
     index_name = os.environ.get("PINECONE_INDEX", "lumina-security")
     
     try:
-        if index_name not in pc.list_indexes().names():
+        index_list = pc.list_indexes().names()
+        if index_name not in index_list:
             from pinecone import ServerlessSpec
             await emit({"type": "log", "message": f"Creating Pinecone index '{index_name}'..."})
             pc.create_index(
@@ -378,6 +379,7 @@ async def _llm_verify(candidate: Dict, namespace: str, emit: EmitFn) -> Optional
         top_k=3,
     )
 
+    context_text = "\n".join(ctx)
     prompt = f"""You are a security expert. Evaluate this potential vulnerability:
 
 File: {candidate['file']}
@@ -385,7 +387,7 @@ Line {candidate['line']}: {candidate['code']}
 Pattern matched: {candidate['type']} — {candidate['detail']}
 
 Context from codebase:
-{chr(10).join(ctx)}
+{context_text}
 
 Respond ONLY with JSON:
 {{
@@ -461,6 +463,7 @@ async def _synthesize_fix(
     end = min(len(lines), vuln["line"] + 5)
     snippet = "\n".join(f"{i+start+1}: {l}" for i, l in enumerate(lines[start:end]))
 
+    context_text = "\n".join(ctx)
     prompt = f"""You are a security engineer. Fix this confirmed vulnerability.
 
 VULNERABILITY:
@@ -474,7 +477,7 @@ VULNERABLE CODE (around line {vuln['line']}):
 {snippet}
 
 SIMILAR PATTERNS FROM CODEBASE:
-{chr(10).join(ctx)}
+{context_text}
 
 Provide a minimal, production-ready fix. Return ONLY JSON:
 {{
