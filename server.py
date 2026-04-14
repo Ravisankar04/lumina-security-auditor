@@ -110,7 +110,7 @@ async def root():
     index = FRONTEND_DIR / "index.html"
     if index.exists():
         return FileResponse(str(index))
-    return JSONResponse({"status": "LUMINA API running", "version": "2.0.0"})
+    return JSONResponse({"status": "LUMINA API running", "version": "2.0.1-nuclear"})
 
 @app.get("/hero.png")
 async def hero_image():
@@ -225,7 +225,7 @@ async def logout():
 
 @app.get("/health")
 async def health():
-    return {"status": "online", "version": "2.0.0"}
+    return {"status": "online", "version": "2.0.1-nuclear"}
 
 @app.post("/api/analyze")
 async def analyze(req: AnalyzeRequest, request: Request):
@@ -302,17 +302,18 @@ async def run_pipeline_logic(repo_url: str, emit_fn, user_token: Optional[str] =
     Logic for running the pipeline (orchestrator or demo).
     """
     try:
-        from orchestrator import LuminaPipeline
+        from pipeline_v2 import LuminaPipeline
         pipeline = LuminaPipeline(emit_fn=emit_fn, user_token=user_token)
         await pipeline.run(repo_url)
 
-    except (ImportError, ModuleNotFoundError):
-        logger.warning("orchestrator.py not found or dependencies missing — running demo mode")
+    except (ImportError, ModuleNotFoundError) as e:
+        logger.warning(f"Core pipeline not found or dependencies missing (v2.0.1): {e}")
         await _demo_pipeline(emit_fn)
 
     except Exception as e:
-        logger.error(f"Pipeline execution error: {e}")
-        await emit_fn({"type": "error", "error": str(e)})
+        full_err = f"[DEPLOY_ID:v2.0.1-nuclear] {str(e)}"
+        logger.error(f"Pipeline execution error: {full_err}")
+        await emit_fn({"type": "error", "error": full_err})
 
 async def _demo_pipeline(emit):
     """Simulated pipeline for testing/demo."""
