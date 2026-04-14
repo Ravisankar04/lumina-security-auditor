@@ -13,6 +13,7 @@ from typing import Dict, Optional
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -81,6 +82,12 @@ app = FastAPI(
 
 # Vercel-friendly entry point
 application = app
+
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=SECRET_KEY,
+    session_cookie="lumina_session_v2",
+)
 
 app.add_middleware(
     CORSMiddleware,
