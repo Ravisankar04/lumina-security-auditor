@@ -1,0 +1,1768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LUMINA® — Autonomous AI Security Auditor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #EDE8DF;
+    --black: #0A0A0A;
+    --red: #E8243C;
+    --cyan: #00D4C8;
+    --teal: #0ABFB8;
+    --white: #F5F2EC;
+    --gray: #6B6760;
+    --dark-cream: #D4CFC6;
+    --ink: #1A1816;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--cream);
+    color: var(--black);
+    font-family: 'Syne', sans-serif;
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* CUSTOM CURSOR */
+  .cursor {
+    width: 12px; height: 12px;
+    background: var(--red);
+    border-radius: 50%;
+    position: fixed; top: 0; left: 0;
+    pointer-events: none;
+    z-index: 9999;
+    transition: transform 0.1s ease;
+    mix-blend-mode: multiply;
+  }
+  .cursor-follower {
+    width: 36px; height: 36px;
+    border: 1.5px solid var(--black);
+    border-radius: 50%;
+    position: fixed; top: 0; left: 0;
+    pointer-events: none;
+    z-index: 9998;
+    transition: transform 0.25s ease, width 0.2s, height 0.2s;
+  }
+  body:has(a:hover) .cursor-follower,
+  body:has(button:hover) .cursor-follower { width: 56px; height: 56px; }
+
+  /* NOISE TEXTURE OVERLAY */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 1000;
+    opacity: 0.4;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0;
+    z-index: 500;
+    padding: 24px 48px;
+    display: flex; align-items: center; justify-content: space-between;
+    mix-blend-mode: multiply;
+  }
+  .nav-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px; letter-spacing: 4px;
+    color: var(--black);
+  }
+  .nav-logo span { color: var(--red); }
+  .nav-links { display: flex; gap: 36px; align-items: center; }
+  .nav-links a {
+    font-size: 11px; font-weight: 700; letter-spacing: 3px;
+    text-transform: uppercase; color: var(--black);
+    text-decoration: none; position: relative;
+  }
+  .nav-links a::after {
+    content: ''; position: absolute; bottom: -3px; left: 0;
+    width: 0; height: 1px; background: var(--red);
+    transition: width 0.3s ease;
+  }
+  .nav-links a:hover::after { width: 100%; }
+  .nav-cta {
+    background: var(--black); color: var(--cream) !important;
+    padding: 10px 24px; letter-spacing: 2px !important;
+  }
+  .nav-cta::after { display: none !important; }
+  .nav-cta:hover { background: var(--red); }
+  .nav-status {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 10px; letter-spacing: 2px; font-weight: 600;
+    color: var(--gray);
+  }
+  .status-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--cyan);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.4); }
+  }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero-left {
+    display: flex; flex-direction: column;
+    justify-content: flex-end;
+    padding: 0 0 80px 48px;
+    position: relative; z-index: 2;
+  }
+
+  .hero-eyebrow {
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 4px; text-transform: uppercase;
+    color: var(--gray); margin-bottom: 24px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .hero-eyebrow::before {
+    content: ''; display: block;
+    width: 40px; height: 1px; background: var(--red);
+  }
+
+  .hero-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(100px, 14vw, 200px);
+    line-height: 0.88;
+    letter-spacing: -2px;
+    color: var(--black);
+    margin-bottom: 0;
+  }
+  .hero-title .reg {
+    font-size: 0.25em;
+    vertical-align: super;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+  }
+
+  .hero-subtitle-block {
+    margin-top: 32px;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .hero-tagline {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 500;
+    letter-spacing: 2px; color: var(--gray);
+    text-transform: uppercase;
+  }
+
+  .hero-desc {
+    font-size: 15px; line-height: 1.7;
+    max-width: 380px; color: #4A4845;
+    font-weight: 400;
+  }
+
+  .hero-actions {
+    margin-top: 40px;
+    display: flex; gap: 16px; align-items: center;
+  }
+
+  .btn-primary {
+    background: var(--black); color: var(--cream);
+    padding: 18px 40px;
+    font-family: 'Syne', sans-serif;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 3px; text-transform: uppercase;
+    border: none; cursor: none;
+    position: relative; overflow: hidden;
+    transition: all 0.3s ease;
+    text-decoration: none; display: inline-block;
+  }
+  .btn-primary::before {
+    content: ''; position: absolute;
+    inset: 0; background: var(--red);
+    transform: translateX(-101%);
+    transition: transform 0.4s cubic-bezier(0.77,0,0.18,1);
+  }
+  .btn-primary:hover::before { transform: translateX(0); }
+  .btn-primary span { position: relative; z-index: 1; }
+
+  .btn-ghost {
+    padding: 18px 40px;
+    font-family: 'Syne', sans-serif;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 3px; text-transform: uppercase;
+    border: 1.5px solid var(--black);
+    background: transparent; color: var(--black);
+    cursor: none; text-decoration: none;
+    transition: all 0.3s ease;
+  }
+  .btn-ghost:hover { background: var(--black); color: var(--cream); }
+
+  .nav-user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 12px;
+    background: rgba(0,0,0,0.05);
+    border-radius: 40px;
+    transition: all 0.3s ease;
+  }
+  .user-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 1px solid var(--black);
+  }
+  .user-name {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .btn-logout {
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--red);
+    text-decoration: none;
+    letter-spacing: 1px;
+    margin-left: 8px;
+    opacity: 0.6;
+  }
+  .btn-logout:hover { opacity: 1; }
+
+  /* HERO STATS */
+  .hero-stats {
+    margin-top: 64px;
+    display: flex; gap: 40px;
+    padding-top: 32px;
+    border-top: 1px solid rgba(0,0,0,0.15);
+  }
+  .stat-item { display: flex; flex-direction: column; gap: 4px; }
+  .stat-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 42px; line-height: 1;
+    color: var(--black);
+  }
+  .stat-num .accent { color: var(--red); }
+  .stat-label {
+    font-size: 9px; font-weight: 700;
+    letter-spacing: 2.5px; color: var(--gray);
+    text-transform: uppercase;
+  }
+
+  /* HERO RIGHT - MARQUEE VISUAL */
+  .hero-right {
+    position: relative; overflow: hidden;
+  }
+  .hero-image-container {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .hero-image-container img {
+    width: 110%; height: 110%;
+    object-fit: cover; object-position: center;
+    filter: saturate(1.1) contrast(1.05);
+  }
+  /* Dark left fade on hero image */
+  .hero-right::before {
+    content: ''; position: absolute;
+    left: 0; top: 0; bottom: 0; width: 120px;
+    background: linear-gradient(to right, var(--cream), transparent);
+    z-index: 1;
+  }
+  /* Code overlay on hero */
+  .code-overlay {
+    position: absolute; inset: 0; z-index: 2;
+    display: flex; flex-direction: column;
+    justify-content: flex-end; padding: 40px;
+    pointer-events: none;
+  }
+  .code-snippet {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; font-weight: 400;
+    color: var(--cyan);
+    background: rgba(0,0,0,0.7);
+    padding: 16px 20px;
+    border-left: 2px solid var(--cyan);
+    max-width: 280px;
+    line-height: 1.8;
+    backdrop-filter: blur(4px);
+  }
+  .code-snippet .kw { color: var(--red); }
+  .code-snippet .fn { color: #FFD580; }
+  .code-snippet .cm { color: #666; }
+
+  /* MARQUEE TICKER */
+  .ticker {
+    background: var(--black); color: var(--cream);
+    padding: 14px 0; overflow: hidden;
+    border-top: 2px solid var(--red);
+    border-bottom: 2px solid var(--red);
+    position: relative; z-index: 10;
+  }
+  .ticker-track {
+    display: flex; gap: 0;
+    animation: ticker-scroll 20s linear infinite;
+    white-space: nowrap;
+  }
+  .ticker-item {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 14px; letter-spacing: 3px;
+    padding: 0 48px;
+    display: flex; align-items: center; gap: 24px;
+  }
+  .ticker-dot { color: var(--red); font-size: 20px; }
+  @keyframes ticker-scroll {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+
+  /* SECTION: ABOUT / FEATURES */
+  section { padding: 120px 48px; position: relative; }
+
+  .section-label {
+    font-size: 9px; font-weight: 700;
+    letter-spacing: 4px; color: var(--gray);
+    text-transform: uppercase; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .section-label::before {
+    content: attr(data-num);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 13px; color: var(--red);
+  }
+
+  /* HOW IT WORKS */
+  .how-section {
+    background: var(--black); color: var(--cream);
+    padding: 120px 48px;
+  }
+  .how-section .section-label { color: rgba(255,255,255,0.4); }
+  .how-section .section-label::before { color: var(--cyan); }
+
+  .how-header {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px; margin-bottom: 80px;
+    align-items: end;
+  }
+  .how-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(60px, 7vw, 100px);
+    line-height: 0.9;
+    color: var(--cream);
+  }
+  .how-title em {
+    font-style: normal; color: var(--cyan);
+  }
+  .how-desc {
+    font-size: 15px; line-height: 1.8;
+    color: rgba(255,255,255,0.55);
+    max-width: 400px;
+  }
+
+  .pipeline-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 1px;
+    background: rgba(255,255,255,0.08);
+  }
+  .pipeline-stage {
+    background: var(--black);
+    padding: 40px 28px;
+    position: relative;
+    border-top: 2px solid transparent;
+    transition: all 0.4s ease;
+    cursor: default;
+  }
+  .pipeline-stage:hover {
+    background: #111;
+    border-top-color: var(--cyan);
+  }
+  .stage-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 56px; line-height: 1;
+    color: rgba(255,255,255,0.08);
+    margin-bottom: 16px;
+    transition: color 0.4s;
+  }
+  .pipeline-stage:hover .stage-num { color: var(--cyan); }
+  .stage-icon { font-size: 24px; margin-bottom: 16px; }
+  .stage-title {
+    font-size: 13px; font-weight: 700;
+    letter-spacing: 1px; color: var(--cream);
+    margin-bottom: 10px;
+    text-transform: uppercase;
+  }
+  .stage-desc {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; line-height: 1.7;
+    color: rgba(255,255,255,0.4);
+  }
+  .stage-tag {
+    margin-top: 16px;
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; letter-spacing: 1px;
+    padding: 4px 10px;
+    background: rgba(0,212,200,0.1);
+    color: var(--cyan);
+    border: 1px solid rgba(0,212,200,0.3);
+  }
+
+  /* SCAN INPUT SECTION */
+  .scan-section {
+    background: #050505;
+    padding: 120px 48px;
+    position: relative;
+    overflow: hidden;
+  }
+  .scan-section::before {
+    content: 'SCAN';
+    position: absolute;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 400px; font-weight: 900;
+    color: rgba(255,255,255,0.03);
+    right: -40px; bottom: -60px;
+    line-height: 1; pointer-events: none;
+    letter-spacing: -10px;
+  }
+
+  .scan-inner {
+    max-width: 900px; margin: 0 auto;
+    text-align: center; position: relative; z-index: 2;
+  }
+  .scan-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(60px, 8vw, 110px);
+    line-height: 0.9; margin-bottom: 20px;
+    color: #fff;
+    text-shadow: 0 0 20px rgba(0, 212, 200, 0.4);
+  }
+  .scan-title .inv {
+    -webkit-text-stroke: 2px var(--cyan);
+    color: transparent;
+    text-shadow: none;
+  }
+  .scan-sub {
+    font-size: 16px; font-weight: 500; color: rgba(255, 255, 255, 0.85);
+    letter-spacing: 1px; margin-bottom: 56px;
+    text-shadow: 0 2px 5px rgba(0,0,0,0.8);
+  }
+
+  .scan-form {
+    display: flex; gap: 0;
+    max-width: 700px; margin: 0 auto;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 4px 30px rgba(0, 212, 200, 0.15);
+  }
+  .scan-input {
+    flex: 1;
+    padding: 22px 28px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px; font-weight: 500;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(5px);
+    border: none; outline: none;
+    color: #fff;
+    letter-spacing: 0.5px;
+  }
+  .scan-input::placeholder { color: rgba(255,255,255,0.4); }
+  .scan-btn {
+    background: var(--cyan); color: var(--black);
+    padding: 0 36px;
+    font-family: 'Syne', sans-serif;
+    font-size: 12px; font-weight: 800;
+    letter-spacing: 3px; text-transform: uppercase;
+    border: none; cursor: pointer;
+    white-space: nowrap;
+    position: relative; overflow: hidden;
+    transition: all 0.3s ease;
+  }
+  .scan-btn::before {
+    content: ''; position: absolute; inset: 0;
+    background: var(--red);
+    transform: translateY(101%);
+    transition: transform 0.35s cubic-bezier(0.77,0,0.18,1);
+  }
+  .scan-btn:hover::before { transform: translateY(0); }
+  .scan-btn span { position: relative; z-index: 1; }
+  .scan-btn:hover { color: #fff; text-shadow: 0 0 8px rgba(255,255,255,0.5); }
+
+  /* PROGRESS PANEL (glassmorphism look for animation background) */
+  .progress-panel {
+    display: none;
+    max-width: 750px; margin: 50px auto 0;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    background: rgba(15, 10, 20, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+    color: var(--cream);
+    padding: 32px 40px;
+    font-family: 'Syne', sans-serif;
+  }
+  .progress-panel.active { display: block; }
+  .progress-header {
+    display: flex; justify-content: space-between;
+    align-items: center; margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+  .progress-title {
+    font-size: 14px; font-weight: 800;
+    letter-spacing: 4px; text-transform: uppercase;
+    color: #fff;
+    text-shadow: 0 0 10px rgba(0, 212, 200, 0.8);
+  }
+  .progress-status {
+    font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.6);
+    letter-spacing: 2px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .stage-track {
+    display: flex; flex-direction: column; gap: 12px;
+    margin-bottom: 30px;
+    text-align: left;
+  }
+  .stage-row {
+    display: flex; align-items: center; gap: 16px;
+    font-size: 12px; font-weight: 700; padding: 14px 18px;
+    border-left: 3px solid rgba(255,255,255,0.15);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 0 8px 8px 0;
+  }
+  .stage-row.active {
+    border-left-color: var(--cyan);
+    background: rgba(0, 212, 200, 0.15);
+    color: #fff;
+    transform: translateX(6px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  }
+  .stage-row.done {
+    border-left-color: rgba(0, 212, 200, 0.5);
+    color: var(--cyan);
+    opacity: 0.8;
+  }
+  .stage-row .icon { font-size: 16px; min-width: 24px; text-align: center; }
+  .stage-row .label { flex: 1; letter-spacing: 1.5px; }
+  .stage-row.active .label { text-shadow: 0 0 8px rgba(255,255,255,0.4); }
+  .stage-row .check { color: var(--cyan); font-size: 14px; text-shadow: 0 0 10px var(--cyan); }
+
+  .terminal-log {
+    background: rgba(0, 0, 0, 0.75);
+    padding: 20px; font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+    line-height: 1.8; color: #00e5d6;
+    max-height: 140px; overflow-y: auto;
+    border: 1px solid rgba(0,212,200,0.3);
+    border-radius: 6px;
+    box-shadow: inset 0 0 15px rgba(0,0,0,0.8);
+    text-shadow: 0 0 5px rgba(0,212,200,0.4);
+    text-align: left;
+  }
+  .terminal-log .log-line { display: block; }
+  .terminal-log .log-line::before { content: '➜ '; color: var(--cyan); margin-right: 6px; }
+  .log-success { color: var(--cyan) !important; text-shadow: 0 0 8px var(--cyan); }
+  .log-warn { color: #FFD580 !important; }
+  .log-error { color: var(--red) !important; }
+
+  .pr-result {
+    display: none;
+    margin-top: 24px; padding: 20px;
+    background: rgba(0,212,200,0.08);
+    border: 1px solid rgba(0,212,200,0.3);
+    text-align: center;
+  }
+  .pr-result.active { display: block; }
+  .pr-label { font-size: 9px; color: var(--cyan); letter-spacing: 2px; margin-bottom: 8px; }
+  .pr-link {
+    font-size: 11px; color: var(--cream);
+    text-decoration: none; letter-spacing: 1px;
+    border-bottom: 1px solid rgba(255,255,255,0.3);
+  }
+
+  /* REPORT SECTION */
+  .report-section {
+    display: none;
+    margin-top: 40px;
+    background: var(--ink);
+    border: 1.5px solid rgba(0,212,200,0.25);
+    color: var(--cream);
+    font-family: 'JetBrains Mono', monospace;
+    padding: 0;
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .report-section.active { display: block; }
+  .report-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 28px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    background: rgba(0,0,0,0.3);
+  }
+  .report-title {
+    font-size: 10px; letter-spacing: 3px; color: var(--cyan);
+    font-weight: 700; text-transform: uppercase;
+  }
+  .report-stats {
+    display: flex; gap: 24px;
+  }
+  .report-stat {
+    text-align: center;
+  }
+  .report-stat-num {
+    font-size: 22px; font-weight: 700; color: var(--cyan);
+    display: block;
+  }
+  .report-stat-label {
+    font-size: 8px; letter-spacing: 2px; color: rgba(255,255,255,0.4);
+    text-transform: uppercase;
+  }
+  .report-body { padding: 28px; }
+  .report-summary {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px; margin-bottom: 32px;
+  }
+  .summary-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 14px 16px;
+  }
+  .summary-card-label {
+    font-size: 8px; letter-spacing: 2px; color: var(--gray);
+    text-transform: uppercase; margin-bottom: 6px;
+  }
+  .summary-card-value {
+    font-size: 13px; color: var(--cream); font-weight: 600;
+  }
+  .severity-critical { color: #ff4757 !important; }
+  .severity-high     { color: #ff6b35 !important; }
+  .severity-medium   { color: #FFD580 !important; }
+  .severity-low      { color: var(--cyan) !important; }
+  .severity-info     { color: rgba(255,255,255,0.5) !important; }
+
+  .report-section-title {
+    font-size: 9px; letter-spacing: 3px; color: var(--cyan);
+    text-transform: uppercase; margin: 28px 0 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .vuln-card {
+    margin-bottom: 18px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(0,0,0,0.2);
+  }
+  .vuln-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 16px;
+    background: rgba(0,0,0,0.2);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    flex-wrap: wrap;
+  }
+  .vuln-badge {
+    font-size: 8px; font-weight: 700; letter-spacing: 2px;
+    padding: 3px 8px; text-transform: uppercase;
+    border: 1px solid currentColor;
+  }
+  .vuln-name { font-size: 11px; font-weight: 600; flex: 1; }
+  .vuln-file {
+    font-size: 9px; color: rgba(255,255,255,0.35);
+    letter-spacing: 0.5px;
+  }
+  .vuln-body { padding: 14px 16px; font-size: 10px; line-height: 1.8; }
+  .vuln-detail { color: rgba(255,255,255,0.55); margin-bottom: 10px; }
+  .code-diff {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    margin-top: 10px;
+  }
+  .code-block {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 10px 12px;
+  }
+  .code-block-label {
+    font-size: 7px; letter-spacing: 2px; text-transform: uppercase;
+    margin-bottom: 6px; font-weight: 700;
+  }
+  .code-block-label.before { color: #ff4757; }
+  .code-block-label.after  { color: var(--cyan); }
+  .code-block pre {
+    font-size: 9px; line-height: 1.6;
+    color: rgba(255,255,255,0.7);
+    white-space: pre-wrap; word-break: break-all;
+    margin: 0;
+  }
+  .no-issues-msg {
+    text-align: center; padding: 40px 20px;
+    font-size: 11px; color: var(--cyan);
+    letter-spacing: 2px;
+  }
+
+  /* CREATE PR BUTTON */
+  .create-pr-btn {
+    display: none;
+    margin: 24px auto 0;
+    padding: 16px 40px;
+    background: var(--cyan);
+    color: var(--black);
+    font-family: 'Syne', sans-serif;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 3px; text-transform: uppercase;
+    border: none; cursor: none;
+    width: 100%;
+    position: relative; overflow: hidden;
+    transition: all 0.3s ease;
+  }
+  .create-pr-btn.visible { display: block; }
+  .create-pr-btn:hover { background: var(--teal); }
+  .create-pr-btn:disabled {
+    opacity: 0.5; cursor: not-allowed;
+  }
+  .create-pr-btn span { position: relative; z-index: 1; }
+
+  /* FEATURES GRID */
+  .features-section { background: var(--cream); }
+  .features-header {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 48px; margin-bottom: 80px; align-items: end;
+  }
+  .features-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(60px, 7vw, 100px);
+    line-height: 0.9;
+  }
+  .features-desc {
+    font-size: 14px; line-height: 1.8;
+    color: var(--gray); max-width: 380px;
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2px; background: rgba(0,0,0,0.1);
+  }
+  .feature-card {
+    background: var(--cream); padding: 48px 36px;
+    position: relative; overflow: hidden;
+    transition: background 0.4s ease;
+    border-top: 3px solid transparent;
+  }
+  .feature-card:hover {
+    background: var(--black);
+    border-top-color: var(--red);
+  }
+  .feature-card::after {
+    content: attr(data-icon);
+    position: absolute; bottom: -20px; right: -10px;
+    font-size: 100px; opacity: 0.05;
+    pointer-events: none;
+    transition: opacity 0.4s, transform 0.4s;
+  }
+  .feature-card:hover::after { opacity: 0.1; transform: scale(1.1); }
+
+  .feature-icon {
+    width: 44px; height: 44px; margin-bottom: 24px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    border: 1.5px solid rgba(0,0,0,0.2);
+    transition: all 0.4s;
+  }
+  .feature-card:hover .feature-icon {
+    border-color: var(--red);
+    color: var(--red);
+  }
+  .feature-title {
+    font-size: 15px; font-weight: 800;
+    letter-spacing: 0.5px; margin-bottom: 12px;
+    text-transform: uppercase;
+    transition: color 0.4s;
+  }
+  .feature-card:hover .feature-title { color: var(--cream); }
+  .feature-text {
+    font-size: 13px; line-height: 1.7;
+    color: var(--gray); transition: color 0.4s;
+  }
+  .feature-card:hover .feature-text { color: rgba(255,255,255,0.5); }
+
+  /* TECH STACK */
+  .tech-section {
+    padding: 80px 48px;
+    background: var(--dark-cream);
+    border-top: 1px solid rgba(0,0,0,0.1);
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+  }
+  .tech-label { margin-bottom: 40px; }
+  .tech-row {
+    display: flex; gap: 2px;
+    flex-wrap: wrap;
+  }
+  .tech-pill {
+    padding: 12px 24px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; font-weight: 500;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    background: var(--cream); color: var(--black);
+    border: 1px solid rgba(0,0,0,0.15);
+    transition: all 0.25s ease;
+    cursor: default;
+  }
+  .tech-pill:hover {
+    background: var(--black); color: var(--cyan);
+    border-color: var(--black);
+  }
+  .tech-pill.featured {
+    background: var(--black); color: var(--cream);
+    border-color: var(--black);
+  }
+  .tech-pill.featured:hover {
+    background: var(--red); color: var(--cream);
+    border-color: var(--red);
+  }
+
+  /* FOOTER */
+  footer {
+    background: var(--black); color: var(--cream);
+    padding: 80px 48px 40px;
+  }
+  .footer-top {
+    display: grid; grid-template-columns: 2fr 1fr 1fr;
+    gap: 60px; margin-bottom: 64px;
+    padding-bottom: 64px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+  .footer-brand {}
+  .footer-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 56px; line-height: 1;
+    margin-bottom: 20px;
+  }
+  .footer-logo span { color: var(--red); }
+  .footer-tagline {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: rgba(255,255,255,0.4);
+    letter-spacing: 2px; text-transform: uppercase;
+    margin-bottom: 28px;
+  }
+  .footer-col-title {
+    font-size: 9px; font-weight: 700;
+    letter-spacing: 3px; text-transform: uppercase;
+    color: rgba(255,255,255,0.3); margin-bottom: 20px;
+  }
+  .footer-links { display: flex; flex-direction: column; gap: 12px; }
+  .footer-links a {
+    font-size: 13px; color: rgba(255,255,255,0.6);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .footer-links a:hover { color: var(--cyan); }
+  .footer-bottom {
+    display: flex; justify-content: space-between;
+    align-items: center;
+  }
+  .footer-copy {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; color: rgba(255,255,255,0.25);
+    letter-spacing: 1px;
+  }
+  .footer-version {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 14px; color: rgba(255,255,255,0.15);
+    letter-spacing: 3px;
+  }
+
+  /* ANIMATIONS */
+  .fade-up {
+    opacity: 0; transform: translateY(40px);
+    transition: opacity 0.8s ease, transform 0.8s ease;
+  }
+  .fade-up.visible { opacity: 1; transform: translateY(0); }
+
+  .char-reveal {
+    overflow: hidden; display: block;
+  }
+  .char-reveal span {
+    display: inline-block;
+    transform: translateY(100%);
+    animation: slideUp 0.8s cubic-bezier(0.77,0,0.18,1) forwards;
+  }
+  @keyframes slideUp {
+    to { transform: translateY(0); }
+  }
+
+  /* Spinning red badge */
+  .badge-spin {
+    position: absolute; right: 48px; top: 50%;
+    transform: translateY(-50%);
+    width: 120px; height: 120px;
+  }
+  .badge-spin svg {
+    animation: spin 12s linear infinite;
+  }
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+  /* Responsive */
+  @media (max-width: 1024px) {
+    .hero { grid-template-columns: 1fr; }
+    .hero-right { display: none; }
+    .hero-left { padding: 140px 36px 80px; justify-content: flex-start; }
+    .pipeline-grid { grid-template-columns: repeat(3, 1fr); }
+    .features-grid { grid-template-columns: repeat(2, 1fr); }
+    .how-header, .features-header { grid-template-columns: 1fr; }
+    .footer-top { grid-template-columns: 1fr; }
+  }
+
+  /* Loading screen */
+  .loader {
+    position: fixed; inset: 0;
+    background: var(--black); z-index: 9000;
+    display: flex; align-items: center; justify-content: center;
+    transition: opacity 0.6s ease, visibility 0.6s ease;
+  }
+  .loader.gone { opacity: 0; visibility: hidden; }
+  .loader-content { text-align: center; }
+  .loader-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 72px; color: var(--cream);
+    letter-spacing: 8px;
+    animation: blink 0.8s step-end infinite alternate;
+  }
+  .loader-bar {
+    width: 200px; height: 2px;
+    background: rgba(255,255,255,0.1);
+    margin: 24px auto 0; overflow: hidden;
+  }
+  .loader-fill {
+    height: 100%; background: var(--cyan);
+    animation: loadFill 1.8s ease forwards;
+  }
+  @keyframes loadFill { from { width: 0; } to { width: 100%; } }
+  @keyframes blink { from { opacity: 1; } to { opacity: 0.3; } }
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div class="loader" id="loader">
+  <div class="loader-content">
+    <div class="loader-logo">LUMINA</div>
+    <div class="loader-bar"><div class="loader-fill"></div></div>
+  </div>
+</div>
+
+<!-- CURSOR -->
+<div class="cursor" id="cursor"></div>
+<div class="cursor-follower" id="cursorFollower"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">LUMINA<span>®</span></div>
+  <div class="nav-links">
+    <div id="authContainer">
+      <!-- Will be populated by JS -->
+      <a href="/api/auth/login" class="nav-cta" id="loginBtn">Login with GitHub</a>
+    </div>
+    <a href="#how">Process</a>
+    <a href="#scan">Audit</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-left">
+    <div class="hero-eyebrow">Autonomous AI Security Auditor — v2.0</div>
+    <h1 class="hero-title">
+      LUMINA<span class="reg">®</span>
+    </h1>
+    <div class="hero-subtitle-block">
+      <div class="hero-tagline">// Scan → Detect → Remediate → PR</div>
+      <p class="hero-desc">
+        A six-stage LangGraph pipeline that crawls your GitHub repository, maps its architecture, detects vulnerabilities using GPT-4o, generates fixes, and opens a pull request — all within 90 seconds.
+      </p>
+    </div>
+    <div class="hero-actions">
+      <a href="#scan" class="btn-primary"><span>Execute Scan →</span></a>
+      <a href="#how" class="btn-ghost">View Pipeline</a>
+    </div>
+    <div class="hero-stats">
+      <div class="stat-item">
+        <div class="stat-num">90<span class="accent">s</span></div>
+        <div class="stat-label">Full Audit Time</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num"><span class="accent">6</span></div>
+        <div class="stat-label">Pipeline Stages</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">100<span class="accent">%</span></div>
+        <div class="stat-label">Automated</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero-right">
+    <div class="hero-image-container">
+      <img src="hero.png" alt="LUMINA AI Security Auditor" id="heroImg">
+    </div>
+    <div class="code-overlay">
+      <div class="code-snippet">
+        <span class="cm">// Vulnerability detected</span><br>
+        <span class="kw">CVE-2023-4863</span> → <span class="fn">PATCHED</span><br>
+        eval() injection → <span class="fn">SAFE</span><br>
+        SQL injection → <span class="fn">FIXED</span><br>
+        <span class="cm">// PR #47 opened ✓</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TICKER -->
+<div class="ticker">
+  <div class="ticker-track" id="ticker">
+    <div class="ticker-item">AUTONOMOUS SCANNING <span class="ticker-dot">●</span></div>
+    <div class="ticker-item">GPT-4O POWERED <span class="ticker-dot">●</span></div>
+    <div class="ticker-item">PINECONE RAG <span class="ticker-dot">●</span></div>
+    <div class="ticker-item">AUTO PULL REQUEST <span class="ticker-dot">●</span></div>
+    <div class="ticker-item">LANGGRAPH PIPELINE <span class="ticker-dot">●</span></div>
+    <div class="ticker-item">REAL-TIME STREAMING <span class="ticker-dot">●</span></div>
+    <div class="ticker-item">WEBSOCKET UPDATES <span class="ticker-dot">●</span></div>
+    <div class="ticker-item">90 SECOND AUDIT <span class="ticker-dot">●</span></div>
+    <div class="ticker-item">AUTONOMOUS SCANNING <span class="ticker-dot">●</span></div>
+    <div class="ticker-item">GPT-4O POWERED <span class="ticker-dot">●</span></div>
+    <div class="ticker-item">PINECONE RAG <span class="ticker-dot">●</span></div>
+    <div class="ticker-item">AUTO PULL REQUEST <span class="ticker-dot">●</span></div>
+    <div class="ticker-item">LANGGRAPH PIPELINE <span class="ticker-dot">●</span></div>
+    <div class="ticker-item">REAL-TIME STREAMING <span class="ticker-dot">●</span></div>
+    <div class="ticker-item">WEBSOCKET UPDATES <span class="ticker-dot">●</span></div>
+    <div class="ticker-item">90 SECOND AUDIT <span class="ticker-dot">●</span></div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<section class="how-section" id="how">
+  <div class="section-label" data-num="01">The Pipeline</div>
+  <div class="how-header">
+    <h2 class="how-title">SIX<br><em>STAGE</em><br>WORKFLOW</h2>
+    <p class="how-desc">
+      LUMINA's LangGraph orchestration engine executes a deterministic six-node pipeline with concurrent async execution, Semaphore-controlled parallelism, and WebSocket-driven real-time event streaming.
+    </p>
+  </div>
+  <div class="pipeline-grid">
+    <div class="pipeline-stage">
+      <div class="stage-num">01</div>
+      <div class="stage-icon">🕷</div>
+      <div class="stage-title">Repository Ingestion</div>
+      <div class="stage-desc">Parallel async GitHub API crawling with Semaphore(10). Extracts file contents, structure, and metadata at scale.</div>
+      <div class="stage-tag">Semaphore(10)</div>
+    </div>
+    <div class="pipeline-stage">
+      <div class="stage-num">02</div>
+      <div class="stage-icon">🧠</div>
+      <div class="stage-title">Semantic Indexing</div>
+      <div class="stage-desc">Language-aware chunking, 3072-dim OpenAI embeddings, batched Pinecone upsert for intelligent retrieval.</div>
+      <div class="stage-tag">Pinecone RAG</div>
+    </div>
+    <div class="pipeline-stage">
+      <div class="stage-num">03</div>
+      <div class="stage-icon">🗺</div>
+      <div class="stage-title">Architecture Mapping</div>
+      <div class="stage-desc">RAG retrieval of top-5 chunks. GPT-4o structured analysis generates component relationships and data flows.</div>
+      <div class="stage-tag">GPT-4o</div>
+    </div>
+    <div class="pipeline-stage">
+      <div class="stage-num">04</div>
+      <div class="stage-icon">🔍</div>
+      <div class="stage-title">Vuln Detection</div>
+      <div class="stage-desc">Two-phase: regex pre-filtering followed by concurrent LLM verification via asyncio.gather for novel patterns.</div>
+      <div class="stage-tag">Dual-Phase</div>
+    </div>
+    <div class="pipeline-stage">
+      <div class="stage-num">05</div>
+      <div class="stage-icon">⚙️</div>
+      <div class="stage-title">Fix Synthesis</div>
+      <div class="stage-desc">Per-vulnerability RAG-augmented patch generation. Retrieves similar patterns, produces production-ready fixes.</div>
+      <div class="stage-tag">Semaphore(5)</div>
+    </div>
+    <div class="pipeline-stage">
+      <div class="stage-num">06</div>
+      <div class="stage-icon">🚀</div>
+      <div class="stage-title">Pull Request</div>
+      <div class="stage-desc">Fork repo, create security branch, concurrent commits with Semaphore(3), open descriptive PR automatically.</div>
+      <div class="stage-tag">Auto PR</div>
+    </div>
+  </div>
+</section>
+
+<!-- SCAN SECTION -->
+<section class="scan-section" id="scan">
+  <div id="scanAnimationContainer" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; overflow: hidden;"></div>
+  <div class="scan-inner">
+    <div class="section-label" data-num="02" style="justify-content:center;">Execute Audit</div>
+    <h2 class="scan-title">
+      START<br><span class="inv">SCANNING</span>
+    </h2>
+    <p class="scan-sub">Drop a GitHub URL. LUMINA handles the rest in under 90 seconds.</p>
+
+    <div class="scan-form">
+      <input
+        class="scan-input"
+        type="text"
+        id="repoInput"
+        placeholder="https://github.com/owner/repository"
+      />
+      <button class="scan-btn" id="scanBtn" onclick="startScan()">
+        <span>Execute Scan →</span>
+      </button>
+    </div>
+
+    <div class="progress-panel" id="progressPanel">
+      <div class="progress-header">
+        <div class="progress-title">// LUMINA PIPELINE ACTIVE</div>
+        <div class="progress-status" id="progressStatus">INITIALIZING...</div>
+      </div>
+      <div class="stage-track" id="stageTrack">
+        <div class="stage-row" id="s1"><div class="icon">🕷</div><div class="label">STAGE 01 — REPOSITORY INGESTION</div><div class="check"></div></div>
+        <div class="stage-row" id="s2"><div class="icon">🧠</div><div class="label">STAGE 02 — SEMANTIC INDEXING</div><div class="check"></div></div>
+        <div class="stage-row" id="s3"><div class="icon">🗺</div><div class="label">STAGE 03 — ARCHITECTURE MAPPING</div><div class="check"></div></div>
+        <div class="stage-row" id="s4"><div class="icon">🔍</div><div class="label">STAGE 04 — VULNERABILITY DETECTION</div><div class="check"></div></div>
+        <div class="stage-row" id="s5"><div class="icon">⚙️</div><div class="label">STAGE 05 — FIX SYNTHESIS</div><div class="check"></div></div>
+        <div class="stage-row" id="s6"><div class="icon">🚀</div><div class="label">STAGE 06 — PULL REQUEST CREATION</div><div class="check"></div></div>
+      </div>
+      <div class="terminal-log" id="termLog">
+        <span class="log-line">LUMINA v2.0 initializing...</span>
+      </div>
+      <div class="pr-result" id="prResult">
+        <div class="pr-label">// PULL REQUEST GENERATED</div>
+        <a href="#" class="pr-link" id="prLink" target="_blank" rel="noopener">View Pull Request on GitHub →</a>
+      </div>
+      <button class="create-pr-btn" id="createPRBtn" onclick="createPullRequest()">
+        <span id="createPRBtnText">🚀 Create Pull Request</span>
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- REPORT SECTION -->
+<section style="padding: 0 48px 80px; background: var(--cream);">
+  <div class="report-section" id="reportSection">
+    <div class="report-header">
+      <div class="report-title">// AI Audit Report</div>
+      <div class="report-stats">
+        <div class="report-stat">
+          <span class="report-stat-num" id="reportVulnCount">0</span>
+          <span class="report-stat-label">Vulnerabilities</span>
+        </div>
+        <div class="report-stat">
+          <span class="report-stat-num" id="reportFixCount">0</span>
+          <span class="report-stat-label">Fixes</span>
+        </div>
+        <div class="report-stat">
+          <span class="report-stat-num" id="reportFileCount">0</span>
+          <span class="report-stat-label">Files Scanned</span>
+        </div>
+      </div>
+    </div>
+    <div class="report-body">
+      <div class="report-summary" id="reportSummary"></div>
+      <div class="report-section-title">Vulnerabilities & Fixes</div>
+      <div id="reportVulnList"></div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features-section" id="features">
+  <div class="section-label" data-num="03">Capabilities</div>
+  <div class="features-header">
+    <h2 class="features-title">BUILT<br>DIFFERENT</h2>
+    <p class="features-desc">
+      Beyond static analysis. LUMINA combines generative AI with retrieval-augmented generation to detect and fix vulnerabilities that rule-based tools completely miss.
+    </p>
+  </div>
+  <div class="features-grid">
+    <div class="feature-card" data-icon="🤖">
+      <div class="feature-icon">🤖</div>
+      <div class="feature-title">GPT-4o Intelligence</div>
+      <p class="feature-text">Architecture analysis, context-aware vulnerability verification, and production-quality fix generation powered by OpenAI's most capable model.</p>
+    </div>
+    <div class="feature-card" data-icon="🧬">
+      <div class="feature-icon">🧬</div>
+      <div class="feature-title">RAG-Augmented Analysis</div>
+      <p class="feature-text">3072-dimensional semantic embeddings in Pinecone vector DB enable context-aware code understanding far beyond keyword matching.</p>
+    </div>
+    <div class="feature-card" data-icon="⚡">
+      <div class="feature-icon">⚡</div>
+      <div class="feature-title">Sub-90s Full Audit</div>
+      <p class="feature-text">Parallel async I/O, Semaphore-controlled concurrency, and efficient batching deliver comprehensive audits faster than a coffee break.</p>
+    </div>
+    <div class="feature-card" data-icon="🔀">
+      <div class="feature-icon">🔀</div>
+      <div class="feature-title">Auto PR Generation</div>
+      <p class="feature-text">Automatically forks, creates a security branch, commits all patches concurrently, and opens a descriptive pull request — zero manual steps.</p>
+    </div>
+    <div class="feature-card" data-icon="📡">
+      <div class="feature-icon">📡</div>
+      <div class="feature-title">Real-Time Streaming</div>
+      <p class="feature-text">WebSocket-driven event architecture with asyncio.Queue delivers live pipeline progress to the frontend without polling overhead.</p>
+    </div>
+    <div class="feature-card" data-icon="🔗">
+      <div class="feature-icon">🔗</div>
+      <div class="feature-title">CI/CD Native</div>
+      <p class="feature-text">Designed to integrate seamlessly into DevSecOps pipelines. Trigger on every commit, every PR, every push — at machine speed.</p>
+    </div>
+  </div>
+</section>
+
+<!-- TECH STACK -->
+<div class="tech-section">
+  <div class="section-label tech-label" data-num="04">Technology Stack</div>
+  <div class="tech-row">
+    <div class="tech-pill featured">FastAPI</div>
+    <div class="tech-pill featured">LangGraph</div>
+    <div class="tech-pill featured">GPT-4o</div>
+    <div class="tech-pill featured">Pinecone RAG</div>
+    <div class="tech-pill">PyGithub</div>
+    <div class="tech-pill">Aiohttp</div>
+    <div class="tech-pill">WebSocket</div>
+    <div class="tech-pill">Python 3.9+</div>
+    <div class="tech-pill">asyncio</div>
+    <div class="tech-pill">OpenAI Embeddings</div>
+    <div class="tech-pill">uvicorn</div>
+    <div class="tech-pill">python-dotenv</div>
+    <div class="tech-pill">contextvars</div>
+    <div class="tech-pill">REST API</div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-top">
+    <div class="footer-brand">
+      <div class="footer-logo">LUMINA<span>®</span></div>
+      <div class="footer-tagline">// autonomous ai security auditor v2.0</div>
+      <p style="font-size:13px;color:rgba(255,255,255,0.4);line-height:1.7;max-width:360px;">
+        An academic project demonstrating autonomous AI-powered vulnerability detection and remediation for GitHub repositories.
+      </p>
+    </div>
+    <div>
+      <div class="footer-col-title">References</div>
+      <div class="footer-links">
+        <a href="https://fastapi.tiangolo.com" target="_blank">FastAPI Docs</a>
+        <a href="https://github.com/langchain-ai/langgraph" target="_blank">LangGraph</a>
+        <a href="https://platform.openai.com/docs" target="_blank">OpenAI API</a>
+        <a href="https://docs.pinecone.io" target="_blank">Pinecone</a>
+        <a href="https://owasp.org/Top10" target="_blank">OWASP Top 10</a>
+      </div>
+    </div>
+    <div>
+      <div class="footer-col-title">Project</div>
+      <div class="footer-links">
+        <a href="#how">Pipeline</a>
+        <a href="#features">Features</a>
+        <a href="#scan">Execute Scan</a>
+        <a href="#">GitHub Repo</a>
+        <a href="#">Documentation</a>
+      </div>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <div class="footer-copy">© 2025 LUMINA PROJECT — BCA FINAL YEAR PROJECT — DEPARTMENT OF COMPUTER SCIENCE</div>
+    <div class="footer-version">v2.0</div>
+  </div>
+</footer>
+
+<script>
+  // Loader
+  window.addEventListener('load', async () => {
+    // Auth Check
+    try {
+      const res = await fetch('/api/auth/me');
+      const data = await res.json();
+      const container = document.getElementById('authContainer');
+      
+      if (data.authenticated) {
+        container.innerHTML = `
+          <div class="nav-user">
+            <img src="${data.user.avatar}" class="user-avatar" alt="Avatar">
+            <span class="user-name">${data.user.login}</span>
+            <a href="/api/auth/logout" class="btn-logout">LOGOUT</a>
+          </div>
+        `;
+        const mainCta = document.querySelector('.btn-primary span');
+        if (mainCta) mainCta.textContent = "Start New Audit";
+      }
+    } catch (e) {
+      console.error("Auth check failed", e);
+    }
+
+    // Error handle
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('error') === 'auth_failed') {
+      alert("Authentication failed. Please try again.");
+    }
+
+    setTimeout(() => {
+      document.getElementById('loader').classList.add('gone');
+    }, 2000);
+  });
+
+  // Cursor
+  const cursor = document.getElementById('cursor');
+  const follower = document.getElementById('cursorFollower');
+  let mx = 0, my = 0, fx = 0, fy = 0;
+
+  document.addEventListener('mousemove', e => {
+    mx = e.clientX; my = e.clientY;
+    cursor.style.transform = `translate(${mx - 6}px, ${my - 6}px)`;
+  });
+
+  function animateFollower() {
+    fx += (mx - fx - 18) * 0.12;
+    fy += (my - fy - 18) * 0.12;
+    follower.style.transform = `translate(${fx}px, ${fy}px)`;
+    requestAnimationFrame(animateFollower);
+  }
+  animateFollower();
+
+  // Fade-up observer
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+
+  // Hero image fallback (will use uploaded image if served via backend)
+  const heroImg = document.getElementById('heroImg');
+  heroImg.onerror = function() {
+    this.parentElement.style.background = 'linear-gradient(135deg, #1a1816 0%, #0a0a0a 100%)';
+    this.style.display = 'none';
+  };
+
+  // ─────────────────────────────────────────────────
+  // LUMINA Frontend Logic — Fixed & Complete
+  // ─────────────────────────────────────────────────
+
+  let ws = null;
+  let _pendingPrData = null;  // holds {repo_url, report} until user clicks Create PR
+
+  // ── Scan ──────────────────────────────────────────
+
+  async function startScan() {
+    const repo = document.getElementById('repoInput').value.trim();
+    if (!repo) { alert('Please enter a GitHub repository URL.'); return; }
+
+    // Reset UI
+    const panel       = document.getElementById('progressPanel');
+    const prResult    = document.getElementById('prResult');
+    const createPRBtn = document.getElementById('createPRBtn');
+    const reportSec   = document.getElementById('reportSection');
+    panel.classList.add('active');
+    prResult.classList.remove('active');
+    createPRBtn.classList.remove('visible');
+    reportSec.classList.remove('active');
+    document.getElementById('termLog').innerHTML = '<span class="log-line">LUMINA v2.0 initializing...</span>';
+
+    // Reset stage indicators
+    ['s1','s2','s3','s4','s5','s6'].forEach(id => {
+      const el = document.getElementById(id);
+      el.className = 'stage-row';
+      el.querySelector('.check').textContent = '';
+    });
+
+    document.getElementById('progressStatus').textContent = 'CONNECTING...';
+    addLog('[Step 0] Connecting to LUMINA backend...');
+
+    _pendingPrData = null;
+
+    try {
+      const res = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ repo_url: repo })
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(err.detail || `HTTP ${res.status}`);
+      }
+
+      addLog('[Step 1] Stream connected — pipeline running...');
+      document.getElementById('progressStatus').textContent = 'RUNNING...';
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop(); // Keep partial line
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed.startsWith(':')) continue; // Skip pings
+
+          if (trimmed.startsWith('data: ')) {
+            try {
+              const msg = JSON.parse(trimmed.substring(6));
+              handleEvent(msg, repo);
+            } catch(e) {
+              console.warn('Parse error:', e, trimmed);
+            }
+          }
+        }
+      }
+
+      addLog('Analysis session complete.', 'success');
+      if (document.getElementById('progressStatus').textContent === 'RUNNING...') {
+        document.getElementById('progressStatus').textContent = 'COMPLETE';
+      }
+
+    } catch(err) {
+      addLog(`Error: ${err.message}`, 'error');
+      document.getElementById('progressStatus').textContent = 'ERROR';
+    }
+  }
+
+
+  // ── Event Handler ─────────────────────────────────
+
+  const stageMap = {
+    'crawl': 's1', 'index': 's2', 'architecture': 's3',
+    'scan': 's4',  'fix': 's5',   'pr': 's6'
+  };
+
+  const stageLabels = {
+    'crawl': 'Step 1', 'index': 'Step 2', 'architecture': 'Step 3',
+    'scan':  'Step 4', 'fix':   'Step 5', 'pr': 'Step 6'
+  };
+
+  function handleEvent(msg, repoUrl) {
+    const { type, stage, message, pr_url, error, report } = msg;
+
+    if (type === 'stage_start' && stage && stageMap[stage]) {
+      const el = document.getElementById(stageMap[stage]);
+      el.className = 'stage-row active';
+      addLog(`[${stageLabels[stage]}] ${message || stage}`, 'success');
+    }
+
+    if (type === 'stage_done' && stage && stageMap[stage]) {
+      const el = document.getElementById(stageMap[stage]);
+      el.className = 'stage-row done';
+      el.querySelector('.check').textContent = '✓';
+    }
+
+    if (type === 'log' && message) {
+      addLog(message);
+    }
+
+    if (type === 'complete') {
+      addLog(`[Pipeline Complete] ${msg.vulnerabilities_found || 0} vulns | ${msg.fixes_applied || 0} fixes`, 'success');
+      document.getElementById('progressStatus').textContent = 'COMPLETE';
+
+      // Render structured report
+      if (report) {
+        renderReport(report);
+      }
+
+      // Store PR data and show "Create Pull Request" button
+      // (Stage 6 already created the PR in the backend, but we wait for
+      //  user confirmation before redirecting — per spec the button triggers redirect)
+      if (pr_url) {
+        _pendingPrData = { pr_url, repo_url: repoUrl, report };
+        document.getElementById('prLink').href = pr_url;
+        document.getElementById('prLink').textContent = `View Pull Request → ${pr_url}`;
+        document.getElementById('prResult').classList.add('active');
+        addLog(`PR ready: ${pr_url}`, 'success');
+      }
+
+      // Show "Create Pull Request" button regardless (to trigger redirect)
+      document.getElementById('createPRBtn').classList.add('visible');
+      document.getElementById('createPRBtnText').textContent =
+        pr_url ? '🚀 Open Pull Request on GitHub' : '🚀 Create Pull Request';
+    }
+
+    if (type === 'error') {
+      addLog(`[ERROR] ${error || 'Unknown pipeline error'}`, 'error');
+      document.getElementById('progressStatus').textContent = 'ERROR';
+    }
+  }
+
+  // ── Create PR / Redirect ──────────────────────────
+
+  async function createPullRequest() {
+    const btn = document.getElementById('createPRBtn');
+    btn.disabled = true;
+
+    // If the backend already created the PR (has pr_url), just redirect
+    if (_pendingPrData && _pendingPrData.pr_url) {
+      addLog('Redirecting to GitHub Pull Request...', 'success');
+      document.getElementById('createPRBtnText').textContent = 'Redirecting...';
+      setTimeout(() => {
+        window.open(_pendingPrData.pr_url, '_blank');
+        btn.disabled = false;
+        document.getElementById('createPRBtnText').textContent = '🚀 Open Pull Request on GitHub';
+      }, 600);
+      return;
+    }
+
+    // If pipeline ran without auto-PR (e.g. no fixes), notify user
+    addLog('No pull request was generated (no fixes to apply).', 'warn');
+    btn.disabled = false;
+  }
+
+  // ── Report Renderer ───────────────────────────────
+
+  function renderReport(report) {
+    const section   = document.getElementById('reportSection');
+    const vulnList  = document.getElementById('reportVulnList');
+    const summary   = document.getElementById('reportSummary');
+    const vulns     = report.vulnerabilities || [];
+    const fixes     = report.fixes || [];
+    const arch      = report.architecture || {};
+
+    // Header counts
+    document.getElementById('reportVulnCount').textContent = vulns.length;
+    document.getElementById('reportFixCount').textContent  = fixes.length;
+    document.getElementById('reportFileCount').textContent = report.files_scanned || 0;
+
+    // Summary cards
+    const severityCounts = {};
+    vulns.forEach(v => {
+      const s = v.severity || 'UNKNOWN';
+      severityCounts[s] = (severityCounts[s] || 0) + 1;
+    });
+
+    const techStack = (arch.tech_stack || []).slice(0, 5).join(', ') || '—';
+    const components = Object.keys(arch.components || {}).length;
+
+    summary.innerHTML = `
+      ${Object.entries(severityCounts).map(([sev, cnt]) => `
+        <div class="summary-card">
+          <div class="summary-card-label">${sev}</div>
+          <div class="summary-card-value severity-${sev.toLowerCase()}">${cnt}</div>
+        </div>
+      `).join('')}
+      <div class="summary-card">
+        <div class="summary-card-label">Tech Stack</div>
+        <div class="summary-card-value" style="font-size:10px;">${techStack}</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-card-label">Components</div>
+        <div class="summary-card-value">${components}</div>
+      </div>
+    `;
+
+    // Fix map keyed by file+line
+    const fixMap = {};
+    fixes.forEach(f => { fixMap[`${f.file}:${f.line}`] = f; });
+
+    // Vulnerability cards with before/after diffs
+    if (vulns.length === 0) {
+      vulnList.innerHTML = '<div class="no-issues-msg">✓ No vulnerabilities detected</div>';
+    } else {
+      vulnList.innerHTML = vulns.map((v, i) => {
+        const fix = fixMap[`${v.file}:${v.line}`];
+        const sev = (v.severity || 'UNKNOWN').toLowerCase();
+        const sevClass = `severity-${sev}`;
+        const diffHtml = fix ? `
+          <div class="code-diff">
+            <div class="code-block">
+              <div class="code-block-label before">Before (vulnerable)</div>
+              <pre>${escHtml(fix.original || v.code || '')}</pre>
+            </div>
+            <div class="code-block">
+              <div class="code-block-label after">After (fixed)</div>
+              <pre>${escHtml(fix.patched_line || '')}</pre>
+            </div>
+          </div>
+          <div style="margin-top:8px;font-size:9px;color:rgba(255,255,255,0.4);">
+            ✓ ${escHtml(fix.explanation || fix.diff_summary || 'Fix applied')}
+          </div>
+        ` : `
+          <div class="code-block" style="margin-top:10px;">
+            <div class="code-block-label before">Vulnerable Code</div>
+            <pre>${escHtml(v.code || '')}</pre>
+          </div>
+        `;
+
+        return `
+          <div class="vuln-card">
+            <div class="vuln-header">
+              <span class="vuln-badge ${sevClass}">${v.severity || 'UNKNOWN'}</span>
+              <span class="vuln-name">${escHtml(v.confirmed_type || v.type || 'Unknown')}</span>
+              ${v.cwe ? `<span class="vuln-file">${escHtml(v.cwe)}</span>` : ''}
+              <span class="vuln-file">${escHtml(v.file)}:${v.line}</span>
+            </div>
+            <div class="vuln-body">
+              <div class="vuln-detail">${escHtml(v.explanation || v.detail || '')}</div>
+              ${diffHtml}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    section.classList.add('active');
+    // Scroll to report
+    setTimeout(() => section.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
+  }
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Log helper ─────────────────────────────────────
+
+  function addLog(text, cls = '') {
+    const log = document.getElementById('termLog');
+    const span = document.createElement('span');
+    span.className = 'log-line' + (cls ? ` log-${cls}` : '');
+    span.textContent = text;
+    log.appendChild(span);
+    log.scrollTop = log.scrollHeight;
+  }
+</script>
+<script type="module">
+import * as THREE from "https://cdn.skypack.dev/three@0.136.0";
+import {OrbitControls} from "https://cdn.skypack.dev/three@0.136.0/examples/jsm/controls/OrbitControls";
+
+let container = document.getElementById("scanAnimationContainer");
+let width = container.clientWidth;
+let height = container.clientHeight;
+
+let scene = new THREE.Scene();
+scene.background = new THREE.Color(0x160016);
+let camera = new THREE.PerspectiveCamera(60, width / height, 1, 1000);
+camera.position.set(0, 4, 21);
+let renderer = new THREE.WebGLRenderer({ alpha: true });
+renderer.setSize(width, height);
+container.appendChild(renderer.domElement);
+
+window.addEventListener("resize", event => {
+  width = container.clientWidth;
+  height = container.clientHeight;
+  camera.aspect = width / height;
+  camera.updateProjectionMatrix();
+  renderer.setSize(width, height);
+});
+
+let controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.enablePan = false;
+
+let gu = {
+  time: {value: 0}
+}
+
+let sizes = [];
+let shift = [];
+let pushShift = () => {
+  shift.push(
+    Math.random() * Math.PI, 
+    Math.random() * Math.PI * 2, 
+    (Math.random() * 0.9 + 0.1) * Math.PI * 0.1,
+    Math.random() * 0.9 + 0.1
+  );
+}
+let pts = new Array(50000).fill().map(p => {
+  sizes.push(Math.random() * 1.5 + 0.5);
+  pushShift();
+  return new THREE.Vector3().randomDirection().multiplyScalar(Math.random() * 0.5 + 9.5);
+})
+for(let i = 0; i < 100000; i++){
+  let r = 10, R = 40;
+  let rand = Math.pow(Math.random(), 1.5);
+  let radius = Math.sqrt(R * R * rand + (1 - rand) * r * r);
+  pts.push(new THREE.Vector3().setFromCylindricalCoords(radius, Math.random() * 2 * Math.PI, (Math.random() - 0.5) * 2 ));
+  sizes.push(Math.random() * 1.5 + 0.5);
+  pushShift();
+}
+
+let g = new THREE.BufferGeometry().setFromPoints(pts);
+g.setAttribute("sizes", new THREE.Float32BufferAttribute(sizes, 1));
+g.setAttribute("shift", new THREE.Float32BufferAttribute(shift, 4));
+let m = new THREE.PointsMaterial({
+  size: 0.125,
+  transparent: true,
+  depthTest: false,
+  blending: THREE.AdditiveBlending,
+  onBeforeCompile: shader => {
+    shader.uniforms.time = gu.time;
+    shader.vertexShader = `
+      uniform float time;
+      attribute float sizes;
+      attribute vec4 shift;
+      varying vec3 vColor;
+      ${shader.vertexShader}
+    `.replace(
+      `gl_PointSize = size;`,
+      `gl_PointSize = size * sizes;`
+    ).replace(
+      `#include <color_vertex>`,
+      `#include <color_vertex>
+        float d = length(abs(position) / vec3(40., 10., 40));
+        d = clamp(d, 0., 1.);
+        vColor = mix(vec3(227., 155., 0.), vec3(100., 50., 255.), d) / 255.;
+      `
+    ).replace(
+      `#include <begin_vertex>`,
+      `#include <begin_vertex>
+        float t = time;
+        float moveT = mod(shift.x + shift.z * t, PI2);
+        float moveS = mod(shift.y + shift.z * t, PI2);
+        transformed += vec3(cos(moveS) * sin(moveT), cos(moveT), sin(moveS) * sin(moveT)) * shift.w;
+      `
+    );
+    shader.fragmentShader = `
+      varying vec3 vColor;
+      ${shader.fragmentShader}
+    `.replace(
+      `#include <clipping_planes_fragment>`,
+      `#include <clipping_planes_fragment>
+        float d = length(gl_PointCoord.xy - 0.5);
+      `
+    ).replace(
+      `vec4 diffuseColor = vec4( diffuse, opacity );`,
+      `vec4 diffuseColor = vec4( vColor, smoothstep(0.5, 0.1, d) );`
+    );
+  }
+});
+let p = new THREE.Points(g, m);
+p.rotation.order = "ZYX";
+p.rotation.z = 0.2;
+scene.add(p)
+
+let clock = new THREE.Clock();
+
+renderer.setAnimationLoop(() => {
+  if(!container.clientWidth) return;
+  controls.update();
+  let t = clock.getElapsedTime() * 0.5;
+  gu.time.value = t * Math.PI;
+  p.rotation.y = t * 0.05;
+  renderer.render(scene, camera);
+});
+</script>
+</body>
+</html>
