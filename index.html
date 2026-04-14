@@ -1,0 +1,1377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LUMINA | Autonomous AI Security Auditor</title>
+<link rel="icon" href="favicon.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black: #0a0a0a;
+    --white: #ffffff;
+    --red: #ff3e3e;
+    --cyan: #00f2ff;
+    --cream: #f4f1ea;
+    --dark-cream: #e8e4db;
+    --gray: #2a2a2a;
+    --light-gray: #f0f0f0;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; cursor: none; }
+  body {
+    background: var(--cream);
+    color: var(--black);
+    font-family: 'Inter', sans-serif;
+    overflow-x: hidden;
+    line-height: 1.5;
+  }
+
+  ::selection { background: var(--red); color: var(--white); }
+
+  /* CURSOR */
+  .cursor {
+    width: 12px; height: 12px;
+    background: var(--red);
+    border-radius: 50%;
+    position: fixed; pointer-events: none;
+    z-index: 10000; mix-blend-mode: difference;
+    transition: transform 0.1s ease;
+  }
+  .cursor-follower {
+    width: 36px; height: 36px;
+    border: 1px solid var(--red);
+    border-radius: 50%;
+    position: fixed; pointer-events: none;
+    z-index: 9999;
+    transition: transform 0.2s cubic-bezier(0.17, 0.67, 0.83, 0.67);
+  }
+
+  /* NAV */
+  nav {
+    position: fixed; top: 0; width: 100%;
+    padding: 32px 48px;
+    display: flex; justify-content: space-between;
+    align-items: center; z-index: 1000;
+    transition: all 0.4s ease;
+  }
+  .nav-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px; letter-spacing: 2px;
+    color: var(--black);
+  }
+  .nav-logo span { color: var(--red); }
+  .nav-links { display: flex; gap: 40px; align-items: center; }
+  .nav-links a {
+    text-decoration: none; color: var(--black);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 2px;
+    transition: color 0.3s ease;
+  }
+  .nav-links a:hover { color: var(--red); }
+  .nav-cta {
+    padding: 12px 24px;
+    background: var(--black); color: var(--white) !important;
+    border: none; border-radius: 0;
+  }
+
+  /* AUTH STYLES */
+  .nav-user {
+    display: flex; align-items: center; gap: 16px;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  }
+  .user-avatar { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--black); }
+  .user-name { font-weight: 700; }
+  .btn-logout { font-size: 9px !important; opacity: 0.5; margin-left: 10px; }
+
+  /* HERO */
+  .hero {
+    height: 100vh;
+    display: grid; grid-template-columns: 1.2fr 1fr;
+    background: var(--cream);
+    position: relative; overflow: hidden;
+  }
+  .hero-left {
+    padding: 0 48px;
+    display: flex; flex-direction: column;
+    justify-content: center;
+    border-right: 1px solid rgba(0,0,0,0.1);
+  }
+  .hero-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 4px; text-transform: uppercase;
+    color: var(--red); margin-bottom: 24px;
+  }
+  .hero-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(80px, 12vw, 180px);
+    line-height: 0.85; margin-bottom: 40px;
+    letter-spacing: -2px;
+  }
+  .hero-title .reg { font-size: 24px; vertical-align: top; margin-left: 4px; }
+  .hero-subtitle-block { max-width: 500px; }
+  .hero-tagline {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; font-weight: 700;
+    color: var(--black); margin-bottom: 16px;
+  }
+  .hero-desc {
+    font-size: 16px; color: rgba(0,0,0,0.6);
+    margin-bottom: 48px; line-height: 1.6;
+  }
+  .hero-actions { display: flex; gap: 24px; }
+  .btn-primary {
+    padding: 20px 48px;
+    background: var(--black); color: var(--white);
+    text-decoration: none; font-weight: 700;
+    font-size: 14px; text-transform: uppercase;
+    letter-spacing: 2px; position: relative;
+    overflow: hidden; transition: all 0.4s ease;
+  }
+  .btn-primary:hover { background: var(--red); transform: translateY(-4px); }
+  .btn-ghost {
+    padding: 20px 48px;
+    border: 1px solid var(--black); color: var(--black);
+    text-decoration: none; font-weight: 700;
+    font-size: 14px; text-transform: uppercase;
+    letter-spacing: 2px; transition: all 0.4s ease;
+  }
+  .btn-ghost:hover { background: var(--black); color: var(--white); transform: translateY(-4px); }
+
+  .hero-right {
+    background: var(--black);
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .hero-image-container {
+    width: 80%; height: 70%;
+    position: relative; z-index: 10;
+  }
+  .hero-image-container img {
+    width: 100%; height: 100%;
+    object-fit: cover; filter: grayscale(1) contrast(1.2);
+    transition: all 0.6s ease;
+  }
+  .hero-image-container:hover img { filter: grayscale(0) contrast(1); transform: scale(1.02); }
+  .code-overlay {
+    position: absolute; bottom: 40px; left: -10%;
+    background: var(--red); color: var(--white);
+    padding: 24px; font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; z-index: 20;
+    box-shadow: 20px 20px 0 var(--black);
+  }
+
+  .hero-stats {
+    display: flex; gap: 60px; margin-top: 80px;
+    padding-top: 40px; border-top: 1px solid rgba(0,0,0,0.1);
+  }
+  .stat-num { font-family: 'Bebas Neue', sans-serif; font-size: 40px; line-height: 1; }
+  .stat-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 2px;
+    color: rgba(0,0,0,0.4); margin-top: 4px;
+  }
+  .accent { color: var(--red); }
+
+  /* TICKER */
+  .ticker {
+    background: var(--black); color: var(--white);
+    padding: 20px 0; border-top: 1px solid rgba(255,255,255,0.1);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    overflow: hidden; white-space: nowrap;
+  }
+  .ticker-track {
+    display: inline-block;
+    animation: ticker 30s linear infinite;
+  }
+  .ticker-item {
+    display: inline-block;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 24px; letter-spacing: 4px;
+    margin-right: 60px;
+  }
+  .ticker-dot { color: var(--red); margin: 0 20px; }
+  @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+  /* SECTION LABELS */
+  .section-label {
+    padding: 48px; display: flex; align-items: center; gap: 20px;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    font-weight: 700; letter-spacing: 4px; text-transform: uppercase;
+  }
+  .section-label::before {
+    content: attr(data-num);
+    font-family: 'Bebas Neue', sans-serif; font-size: 24px; color: var(--red);
+  }
+
+  /* HOW IT WORKS */
+  .how-section { padding: 0 48px 120px; border-bottom: 1px solid rgba(0,0,0,0.1); }
+  .how-header {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 120px; margin-bottom: 100px;
+  }
+  .how-title { font-family: 'Bebas Neue', sans-serif; font-size: 100px; line-height: 0.9; }
+  .how-title em { font-style: normal; color: var(--red); }
+  .how-desc { font-size: 20px; color: rgba(0,0,0,0.7); max-width: 500px; align-self: end; }
+
+  .pipeline-grid {
+    display: grid; grid-template-columns: repeat(6, 1fr);
+    gap: 1px; background: rgba(0,0,0,0.1);
+    border: 1px solid rgba(0,0,0,0.1);
+  }
+  .pipeline-stage {
+    background: var(--cream); padding: 40px;
+    min-height: 380px; display: flex; flex-direction: column;
+    transition: all 0.4s ease;
+  }
+  .pipeline-stage:hover { background: var(--black); color: var(--white); transform: translateY(-10px); z-index: 10; }
+  .stage-num { font-family: 'Bebas Neue', sans-serif; font-size: 32px; margin-bottom: 24px; color: var(--red); }
+  .stage-icon { font-size: 32px; margin-bottom: 32px; }
+  .stage-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; text-transform: uppercase; }
+  .stage-desc { font-size: 13px; opacity: 0.6; line-height: 1.6; }
+  .stage-tag {
+    margin-top: auto; padding-top: 24px;
+    font-family: 'JetBrains Mono', monospace; font-size: 9px;
+    font-weight: 700; letter-spacing: 2px; color: var(--red);
+  }
+
+  /* SCAN INTERFACE */
+  .scan-section {
+    padding: 120px 48px;
+    background: var(--black); color: var(--white);
+    position: relative; min-height: 800px;
+  }
+  .scan-inner { position: relative; z-index: 10; max-width: 1200px; margin: 0 auto; text-align: center; }
+  .scan-title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(60px, 8vw, 120px); line-height: 0.9; margin-bottom: 32px; }
+  .scan-title .inv { -webkit-text-stroke: 1px var(--white); color: transparent; }
+  .scan-sub { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--cyan); margin-bottom: 64px; }
+
+  .scan-form { max-width: 800px; margin: 0 auto; display: flex; gap: 0; background: var(--gray); padding: 10px; }
+  .scan-input {
+    flex: 1; background: transparent; border: none;
+    padding: 24px; color: var(--white);
+    font-family: 'JetBrains Mono', monospace; font-size: 18px;
+    outline: none;
+  }
+  .scan-btn {
+    padding: 0 48px; background: var(--red); color: var(--white);
+    border: none; font-family: 'Bebas Neue', sans-serif;
+    font-size: 24px; letter-spacing: 2px; cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  .scan-btn:hover { background: var(--white); color: var(--black); }
+
+  /* PROGRESS PANEL */
+  .progress-panel {
+    margin-top: 80px; background: #111;
+    border: 1px solid rgba(255,255,255,0.1);
+    max-width: 1000px; margin-left: auto; margin-right: auto;
+    display: none; text-align: left;
+  }
+  .progress-panel.active { display: block; }
+  .progress-header {
+    padding: 24px 32px; border-bottom: 1px solid rgba(255,255,255,0.05);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .progress-title { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.4); }
+  .progress-status { font-family: 'Bebas Neue', sans-serif; font-size: 20px; color: var(--cyan); letter-spacing: 2px; }
+
+  .stage-track { padding: 40px; display: grid; gap: 20px; }
+  .stage-row {
+    display: flex; align-items: center; gap: 24px;
+    opacity: 0.3; transition: all 0.4s ease;
+  }
+  .stage-row.active { opacity: 1; color: var(--cyan); }
+  .stage-row.done { opacity: 1; color: var(--red); }
+  .stage-row .icon { font-size: 24px; }
+  .stage-row .label { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; letter-spacing: 1px; }
+  .stage-row .check { margin-left: auto; font-family: 'Bebas Neue', sans-serif; font-size: 24px; }
+
+  /* TERMINAL */
+  .terminal-log {
+    height: 300px; background: #080808;
+    padding: 24px; font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; overflow-y: auto;
+    border-top: 1px solid rgba(255,255,255,0.05);
+    color: rgba(255,255,255,0.5);
+  }
+  .log-line { display: block; margin-bottom: 6px; }
+  .log-success { color: var(--cyan); }
+  .log-error { color: var(--red); }
+  .log-warn { color: #facc15; }
+
+  /* PR RESULT */
+  .pr-result {
+    padding: 40px; background: var(--red);
+    display: none; text-align: center;
+  }
+  .pr-result.active { display: block; }
+  .pr-label { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; color: var(--white); margin-bottom: 12px; }
+  .pr-link {
+    font-family: 'Bebas Neue', sans-serif; font-size: 32px;
+    color: var(--white); text-decoration: none; border-bottom: 2px solid var(--white);
+    padding-bottom: 4px;
+  }
+
+  /* CREATE PR BUTTON */
+  .create-pr-btn {
+    display: none; width: 100%; padding: 24px;
+    background: var(--cyan); color: var(--black);
+    border: none; font-family: 'Bebas Neue', sans-serif;
+    font-size: 24px; letter-spacing: 2px;
+    cursor: pointer; transition: all 0.3s ease;
+  }
+  .create-pr-btn:hover { background: var(--white); }
+  .create-pr-btn.visible { display: block; }
+
+  /* REPORT SECTION (Dynamic) */
+  .report-section {
+    display: none; background: var(--white);
+    color: var(--black); margin-top: 80px;
+    border: 1px solid rgba(0,0,0,0.1);
+  }
+  .report-section.active { display: block; }
+  .report-header {
+    background: var(--black); color: var(--white);
+    padding: 40px; display: flex; justify-content: space-between;
+    align-items: flex-end;
+  }
+  .report-title { font-family: 'Bebas Neue', sans-serif; font-size: 48px; }
+  .report-stats { display: flex; gap: 40px; }
+  .report-stat { text-align: right; }
+  .report-stat-num { font-family: 'Bebas Neue', sans-serif; font-size: 32px; line-height: 1; }
+  .report-stat-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; opacity: 0.5; text-transform: uppercase; }
+
+  .report-body { padding: 48px; }
+  .report-summary {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 24px; margin-bottom: 60px;
+  }
+  .summary-card {
+    padding: 24px; background: var(--light-gray);
+    border-left: 4px solid var(--black);
+  }
+  .summary-card-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; opacity: 0.5; margin-bottom: 12px; }
+  .summary-card-value { font-family: 'Bebas Neue', sans-serif; font-size: 28px; }
+
+  .vuln-card { margin-bottom: 40px; border: 1px solid rgba(0,0,0,0.1); }
+  .vuln-header {
+    padding: 20px 32px; background: var(--black); color: var(--white);
+    display: flex; align-items: center; gap: 24px;
+  }
+  .vuln-badge {
+    padding: 4px 12px; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700;
+  }
+  .severity-critical { background: var(--red); color: white; }
+  .severity-high { background: #ea580c; color: white; }
+  .severity-medium { background: #ca8a04; color: white; }
+  .severity-low { background: #16a34a; color: white; }
+
+  .vuln-name { font-family: 'Bebas Neue', sans-serif; font-size: 24px; letter-spacing: 1px; }
+  .vuln-file { font-family: 'JetBrains Mono', monospace; font-size: 11px; margin-left: auto; opacity: 0.5; }
+  .vuln-body { padding: 32px; }
+  .vuln-detail { font-size: 15px; color: rgba(0,0,0,0.7); margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid rgba(0,0,0,0.1); }
+
+  .code-diff { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; background: #0a0a0a; }
+  .code-block { background: #111; padding: 20px; }
+  .code-block pre {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: #e2e8f0; white-space: pre-wrap; word-break: break-all;
+  }
+  .code-block-label {
+    font-family: 'JetBrains Mono', monospace; font-size: 9px;
+    text-transform: uppercase; margin-bottom: 16px; font-weight: 700;
+  }
+  .code-block-label.before { color: var(--red); }
+  .code-block-label.after { color: var(--cyan); }
+
+  /* FEATURES */
+  .features-section { padding: 0 48px 120px; }
+  .features-header { grid-template-columns: 1fr 1fr; display: grid; gap: 120px; margin-bottom: 100px; }
+  .features-title { font-family: 'Bebas Neue', sans-serif; font-size: 100px; line-height: 0.9; }
+  .features-desc { font-size: 20px; color: rgba(0,0,0,0.7); max-width: 500px; align-self: end; }
+
+  .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; }
+  .feature-card {
+    padding: 60px 48px; background: var(--white);
+    border: 1px solid rgba(0,0,0,0.05);
+    transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+    position: relative; overflow: hidden;
+  }
+  .feature-card:hover { transform: translateY(-16px); background: var(--black); color: var(--white); border-color: var(--black); }
+  .feature-card .feature-icon { font-size: 40px; margin-bottom: 40px; transition: transform 0.5s ease; }
+  .feature-card:hover .feature-icon { transform: scale(1.2) rotate(10deg); }
+  .feature-card .feature-title { font-family: 'Bebas Neue', sans-serif; font-size: 32px; margin-bottom: 20px; }
+  .feature-card .feature-text { font-size: 14px; opacity: 0.6; line-height: 1.6; transition: all 0.5s ease; }
+  .feature-card:hover .feature-text { color: rgba(255,255,255,0.5); }
+
+  /* TECH STACK */
+  .tech-section {
+    padding: 80px 48px;
+    background: var(--dark-cream);
+    border-top: 1px solid rgba(0,0,0,0.1);
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+  }
+  .tech-label { margin-bottom: 40px; }
+  .tech-row {
+    display: flex; gap: 2px;
+    flex-wrap: wrap;
+  }
+  .tech-pill {
+    padding: 12px 24px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; font-weight: 500;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    background: var(--cream); color: var(--black);
+    border: 1px solid rgba(0,0,0,0.15);
+    transition: all 0.25s ease;
+    cursor: default;
+  }
+  .tech-pill:hover {
+    background: var(--black); color: var(--cyan);
+    border-color: var(--black);
+  }
+  .tech-pill.featured {
+    background: var(--black); color: var(--cream);
+    border-color: var(--black);
+  }
+  .tech-pill.featured:hover {
+    background: var(--red); color: var(--cream);
+    border-color: var(--red);
+  }
+
+  /* FOOTER */
+  footer {
+    background: var(--black); color: var(--cream);
+    padding: 80px 48px 40px;
+  }
+  .footer-top {
+    display: grid; grid-template-columns: 2fr 1fr 1fr;
+    gap: 60px; margin-bottom: 64px;
+    padding-bottom: 64px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+  .footer-brand {}
+  .footer-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 56px; line-height: 1;
+    margin-bottom: 20px;
+  }
+  .footer-logo span { color: var(--red); }
+  .footer-tagline {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: rgba(255,255,255,0.4);
+    letter-spacing: 2px; text-transform: uppercase;
+    margin-bottom: 28px;
+  }
+  .footer-col-title {
+    font-size: 9px; font-weight: 700;
+    letter-spacing: 3px; text-transform: uppercase;
+    color: rgba(255,255,255,0.3); margin-bottom: 20px;
+  }
+  .footer-links { display: flex; flex-direction: column; gap: 12px; }
+  .footer-links a {
+    font-size: 13px; color: rgba(255,255,255,0.6);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .footer-links a:hover { color: var(--cyan); }
+  .footer-bottom {
+    display: flex; justify-content: space-between;
+    align-items: center;
+  }
+  .footer-copy {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; color: rgba(255,255,255,0.25);
+    letter-spacing: 1px;
+  }
+  .footer-version {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 14px; color: rgba(255,255,255,0.15);
+    letter-spacing: 3px;
+  }
+
+  /* ANIMATIONS */
+  .fade-up {
+    opacity: 0; transform: translateY(40px);
+    transition: opacity 0.8s ease, transform 0.8s ease;
+  }
+  .fade-up.visible { opacity: 1; transform: translateY(0); }
+
+  .char-reveal {
+    overflow: hidden; display: block;
+  }
+  .char-reveal span {
+    display: inline-block;
+    transform: translateY(100%);
+    animation: slideUp 0.8s cubic-bezier(0.77,0,0.18,1) forwards;
+  }
+  @keyframes slideUp {
+    to { transform: translateY(0); }
+  }
+
+  /* Spinning red badge */
+  .badge-spin {
+    position: absolute; right: 48px; top: 50%;
+    transform: translateY(-50%);
+    width: 120px; height: 120px;
+  }
+  .badge-spin svg {
+    animation: spin 12s linear infinite;
+  }
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+  /* Responsive */
+  @media (max-width: 1024px) {
+    .hero { grid-template-columns: 1fr; }
+    .hero-right { display: none; }
+    .hero-left { padding: 140px 36px 80px; justify-content: flex-start; }
+    .pipeline-grid { grid-template-columns: repeat(3, 1fr); }
+    .features-grid { grid-template-columns: repeat(2, 1fr); }
+    .how-header, .features-header { grid-template-columns: 1fr; }
+    .footer-top { grid-template-columns: 1fr; }
+  }
+
+  /* Loading screen */
+  .loader {
+    position: fixed; inset: 0;
+    background: var(--black); z-index: 9000;
+    display: flex; align-items: center; justify-content: center;
+    transition: opacity 0.6s ease, visibility 0.6s ease;
+  }
+  .loader.gone { opacity: 0; visibility: hidden; }
+  .loader-content { text-align: center; }
+  .loader-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 72px; color: var(--cream);
+    letter-spacing: 8px;
+    animation: blink 0.8s step-end infinite alternate;
+  }
+  .loader-bar {
+    width: 200px; height: 2px;
+    background: rgba(255,255,255,0.1);
+    margin: 24px auto 0; overflow: hidden;
+  }
+  .loader-fill {
+    height: 100%; background: var(--cyan);
+    animation: loadFill 1.8s ease forwards;
+  }
+  @keyframes loadFill { from { width: 0; } to { width: 100%; } }
+  @keyframes blink { from { opacity: 1; } to { opacity: 0.3; } }
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div class="loader" id="loader">
+  <div class="loader-content">
+    <div class="loader-logo">LUMINA</div>
+    <div class="loader-bar"><div class="loader-fill"></div></div>
+  </div>
+</div>
+
+<!-- CURSOR -->
+<div class="cursor" id="cursor"></div>
+<div class="cursor-follower" id="cursorFollower"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">LUMINA<span>®</span></div>
+  <div class="nav-links">
+    <div id="authContainer">
+      <!-- Will be populated by JS -->
+      <a href="/api/auth/login" class="nav-cta" id="loginBtn">Login with GitHub</a>
+    </div>
+    <a href="#how">Process</a>
+    <a href="#scan">Audit</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-left">
+    <div class="hero-eyebrow">Autonomous AI Security Auditor — v2.0</div>
+    <h1 class="hero-title">
+      LUMINA<span class="reg">®</span>
+    </h1>
+    <div class="hero-subtitle-block">
+      <div class="hero-tagline">// Scan → Detect → Remediate → PR</div>
+      <p class="hero-desc">
+        A six-stage LangGraph pipeline that crawls your GitHub repository, maps its architecture, detects vulnerabilities using GPT-4o, generates fixes, and opens a pull request — all within 90 seconds.
+      </p>
+    </div>
+    <div class="hero-actions">
+      <a href="#scan" class="btn-primary"><span>Execute Scan →</span></a>
+      <a href="#how" class="btn-ghost">View Pipeline</a>
+    </div>
+    <div class="hero-stats">
+      <div class="stat-item">
+        <div class="stat-num">90<span class="accent">s</span></div>
+        <div class="stat-label">Full Audit Time</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num"><span class="accent">6</span></div>
+        <div class="stat-label">Pipeline Stages</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">100<span class="accent">%</span></div>
+        <div class="stat-label">Automated</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero-right">
+    <div class="hero-image-container">
+      <img src="hero.png" alt="LUMINA AI Security Auditor" id="heroImg">
+    </div>
+    <div class="code-overlay">
+      <div class="code-snippet">
+        <span class="cm">// Vulnerability detected</span><br>
+        <span class="kw">CVE-2023-4863</span> → <span class="fn">PATCHED</span><br>
+        eval() injection → <span class="fn">SAFE</span><br>
+        SQL injection → <span class="fn">FIXED</span><br>
+        <span class="cm">// PR #47 opened ✓</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TICKER -->
+<div class="ticker">
+  <div class="ticker-track" id="ticker">
+    <div class="ticker-item">AUTONOMOUS SCANNING <span class="ticker-dot">●</span></div>
+    <div class="ticker-item">GPT-4O POWERED <span class="ticker-dot">●</span></div>
+    <div class="ticker-item">PINECONE RAG <span class="ticker-dot">●</span></div>
+    <div class="ticker-item">AUTO PULL REQUEST <span class="ticker-dot">●</span></div>
+    <div class="ticker-item">LANGGRAPH PIPELINE <span class="ticker-dot">●</span></div>
+    <div class="ticker-item">REAL-TIME STREAMING <span class="ticker-dot">●</span></div>
+    <div class="ticker-item">WEBSOCKET UPDATES <span class="ticker-dot">●</span></div>
+    <div class="ticker-item">90 SECOND AUDIT <span class="ticker-dot">●</span></div>
+    <div class="ticker-item">AUTONOMOUS SCANNING <span class="ticker-dot">●</span></div>
+    <div class="ticker-item">GPT-4O POWERED <span class="ticker-dot">●</span></div>
+    <div class="ticker-item">PINECONE RAG <span class="ticker-dot">●</span></div>
+    <div class="ticker-item">AUTO PULL REQUEST <span class="ticker-dot">●</span></div>
+    <div class="ticker-item">LANGGRAPH PIPELINE <span class="ticker-dot">●</span></div>
+    <div class="ticker-item">REAL-TIME STREAMING <span class="ticker-dot">●</span></div>
+    <div class="ticker-item">WEBSOCKET UPDATES <span class="ticker-dot">●</span></div>
+    <div class="ticker-item">90 SECOND AUDIT <span class="ticker-dot">●</span></div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<section class="how-section" id="how">
+  <div class="section-label" data-num="01">The Pipeline</div>
+  <div class="how-header">
+    <h2 class="how-title">SIX<br><em>STAGE</em><br>WORKFLOW</h2>
+    <p class="how-desc">
+      LUMINA's LangGraph orchestration engine executes a deterministic six-node pipeline with concurrent async execution, Semaphore-controlled parallelism, and WebSocket-driven real-time event streaming.
+    </p>
+  </div>
+  <div class="pipeline-grid">
+    <div class="pipeline-stage">
+      <div class="stage-num">01</div>
+      <div class="stage-icon">🕷</div>
+      <div class="stage-title">Repository Ingestion</div>
+      <div class="stage-desc">Parallel async GitHub API crawling with Semaphore(10). Extracts file contents, structure, and metadata at scale.</div>
+      <div class="stage-tag">Semaphore(10)</div>
+    </div>
+    <div class="pipeline-stage">
+      <div class="stage-num">02</div>
+      <div class="stage-icon">🧠</div>
+      <div class="stage-title">Semantic Indexing</div>
+      <div class="stage-desc">Language-aware chunking, 3072-dim OpenAI embeddings, batched Pinecone upsert for intelligent retrieval.</div>
+      <div class="stage-tag">Pinecone RAG</div>
+    </div>
+    <div class="pipeline-stage">
+      <div class="stage-num">03</div>
+      <div class="stage-icon">🗺</div>
+      <div class="stage-title">Architecture Mapping</div>
+      <div class="stage-desc">RAG retrieval of top-5 chunks. GPT-4o structured analysis generates component relationships and data flows.</div>
+      <div class="stage-tag">GPT-4o</div>
+    </div>
+    <div class="pipeline-stage">
+      <div class="stage-num">04</div>
+      <div class="stage-icon">🔍</div>
+      <div class="stage-title">Vuln Detection</div>
+      <div class="stage-desc">Two-phase: regex pre-filtering followed by concurrent LLM verification via asyncio.gather for novel patterns.</div>
+      <div class="stage-tag">Dual-Phase</div>
+    </div>
+    <div class="pipeline-stage">
+      <div class="stage-num">05</div>
+      <div class="stage-icon">⚙️</div>
+      <div class="stage-title">Fix Synthesis</div>
+      <div class="stage-desc">Per-vulnerability RAG-augmented patch generation. Retrieves similar patterns, produces production-ready fixes.</div>
+      <div class="stage-tag">Semaphore(5)</div>
+    </div>
+    <div class="pipeline-stage">
+      <div class="stage-num">06</div>
+      <div class="stage-icon">🚀</div>
+      <div class="stage-title">Pull Request</div>
+      <div class="stage-desc">Fork repo, create security branch, concurrent commits with Semaphore(3), open descriptive PR automatically.</div>
+      <div class="stage-tag">Auto PR</div>
+    </div>
+  </div>
+</section>
+
+<!-- SCAN SECTION -->
+<section class="scan-section" id="scan">
+  <div id="scanAnimationContainer" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; overflow: hidden;"></div>
+  <div class="scan-inner">
+    <div class="section-label" data-num="02" style="justify-content:center;">Execute Audit</div>
+    <h2 class="scan-title">
+      START<br><span class="inv">SCANNING</span>
+    </h2>
+    <p class="scan-sub">Drop a GitHub URL. LUMINA handles the rest in under 90 seconds.</p>
+
+    <div class="scan-form">
+      <input
+        class="scan-input"
+        type="text"
+        id="repoInput"
+        placeholder="https://github.com/owner/repository"
+      />
+      <button class="scan-btn" id="scanBtn" onclick="startScan()">
+        <span>Execute Scan →</span>
+      </button>
+    </div>
+
+    <div class="progress-panel" id="progressPanel">
+      <div class="progress-header">
+        <div class="progress-title">// LUMINA PIPELINE ACTIVE</div>
+        <div class="progress-status" id="progressStatus">INITIALIZING...</div>
+      </div>
+      <div class="stage-track" id="stageTrack">
+        <div class="stage-row" id="s1"><div class="icon">🕷</div><div class="label">STAGE 01 — REPOSITORY INGESTION</div><div class="check"></div></div>
+        <div class="stage-row" id="s2"><div class="icon">🧠</div><div class="label">STAGE 02 — SEMANTIC INDEXING</div><div class="check"></div></div>
+        <div class="stage-row" id="s3"><div class="icon">🗺</div><div class="label">STAGE 03 — ARCHITECTURE MAPPING</div><div class="check"></div></div>
+        <div class="stage-row" id="s4"><div class="icon">🔍</div><div class="label">STAGE 04 — VULNERABILITY DETECTION</div><div class="check"></div></div>
+        <div class="stage-row" id="s5"><div class="icon">⚙️</div><div class="label">STAGE 05 — FIX SYNTHESIS</div><div class="check"></div></div>
+        <div class="stage-row" id="s6"><div class="icon">🚀</div><div class="label">STAGE 06 — PULL REQUEST CREATION</div><div class="check"></div></div>
+      </div>
+      <div class="terminal-log" id="termLog">
+        <span class="log-line">LUMINA v2.0 initializing...</span>
+      </div>
+      <div class="pr-result" id="prResult">
+        <div class="pr-label">// PULL REQUEST GENERATED</div>
+        <a href="#" class="pr-link" id="prLink" target="_blank" rel="noopener">View Pull Request on GitHub →</a>
+      </div>
+      <button class="create-pr-btn" id="createPRBtn" onclick="createPullRequest()">
+        <span id="createPRBtnText">🚀 Create Pull Request</span>
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- REPORT SECTION -->
+<section style="padding: 0 48px 80px; background: var(--cream);">
+  <div class="report-section" id="reportSection">
+    <div class="report-header">
+      <div class="report-title">// AI Audit Report</div>
+      <div class="report-stats">
+        <div class="report-stat">
+          <span class="report-stat-num" id="reportVulnCount">0</span>
+          <span class="report-stat-label">Vulnerabilities</span>
+        </div>
+        <div class="report-stat">
+          <span class="report-stat-num" id="reportFixCount">0</span>
+          <span class="report-stat-label">Fixes</span>
+        </div>
+        <div class="report-stat">
+          <span class="report-stat-num" id="reportFileCount">0</span>
+          <span class="report-stat-label">Files Scanned</span>
+        </div>
+      </div>
+    </div>
+    <div class="report-body">
+      <div class="report-summary" id="reportSummary"></div>
+      <div class="report-section-title">Vulnerabilities & Fixes</div>
+      <div id="reportVulnList"></div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features-section" id="features">
+  <div class="section-label" data-num="03">Capabilities</div>
+  <div class="features-header">
+    <h2 class="features-title">BUILT<br>DIFFERENT</h2>
+    <p class="features-desc">
+      Beyond static analysis. LUMINA combines generative AI with retrieval-augmented generation to detect and fix vulnerabilities that rule-based tools completely miss.
+    </p>
+  </div>
+  <div class="features-grid">
+    <div class="feature-card" data-icon="🤖">
+      <div class="feature-icon">🤖</div>
+      <div class="feature-title">GPT-4o Intelligence</div>
+      <p class="feature-text">Architecture analysis, context-aware vulnerability verification, and production-quality fix generation powered by OpenAI's most capable model.</p>
+    </div>
+    <div class="feature-card" data-icon="🧬">
+      <div class="feature-icon">🧬</div>
+      <div class="feature-title">RAG-Augmented Analysis</div>
+      <p class="feature-text">3072-dimensional semantic embeddings in Pinecone vector DB enable context-aware code understanding far beyond keyword matching.</p>
+    </div>
+    <div class="feature-card" data-icon="⚡">
+      <div class="feature-icon">⚡</div>
+      <div class="feature-title">Sub-90s Full Audit</div>
+      <p class="feature-text">Parallel async I/O, Semaphore-controlled concurrency, and efficient batching deliver comprehensive audits faster than a coffee break.</p>
+    </div>
+    <div class="feature-card" data-icon="🔀">
+      <div class="feature-icon">🔀</div>
+      <div class="feature-title">Auto PR Generation</div>
+      <p class="feature-text">Automatically forks, creates a security branch, commits all patches concurrently, and opens a descriptive pull request — zero manual steps.</p>
+    </div>
+    <div class="feature-card" data-icon="📡">
+      <div class="feature-icon">📡</div>
+      <div class="feature-title">Real-Time Streaming</div>
+      <p class="feature-text">WebSocket-driven event architecture with asyncio.Queue delivers live pipeline progress to the frontend without polling overhead.</p>
+    </div>
+    <div class="feature-card" data-icon="🔗">
+      <div class="feature-icon">🔗</div>
+      <div class="feature-title">CI/CD Native</div>
+      <p class="feature-text">Designed to integrate seamlessly into DevSecOps pipelines. Trigger on every commit, every PR, every push — at machine speed.</p>
+    </div>
+  </div>
+</section>
+
+<!-- TECH STACK -->
+<div class="tech-section">
+  <div class="section-label tech-label" data-num="04">Technology Stack</div>
+  <div class="tech-row">
+    <div class="tech-pill featured">FastAPI</div>
+    <div class="tech-pill featured">LangGraph</div>
+    <div class="tech-pill featured">GPT-4o</div>
+    <div class="tech-pill featured">Pinecone RAG</div>
+    <div class="tech-pill">PyGithub</div>
+    <div class="tech-pill">Aiohttp</div>
+    <div class="tech-pill">WebSocket</div>
+    <div class="tech-pill">Python 3.9+</div>
+    <div class="tech-pill">asyncio</div>
+    <div class="tech-pill">OpenAI Embeddings</div>
+    <div class="tech-pill">uvicorn</div>
+    <div class="tech-pill">python-dotenv</div>
+    <div class="tech-pill">contextvars</div>
+    <div class="tech-pill">REST API</div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-top">
+    <div class="footer-brand">
+      <div class="footer-logo">LUMINA<span>®</span></div>
+      <div class="footer-tagline">// autonomous ai security auditor v2.0</div>
+      <p style="font-size:13px;color:rgba(255,255,255,0.4);line-height:1.7;max-width:360px;">
+        An academic project demonstrating autonomous AI-powered vulnerability detection and remediation for GitHub repositories.
+      </p>
+    </div>
+    <div>
+      <div class="footer-col-title">References</div>
+      <div class="footer-links">
+        <a href="https://fastapi.tiangolo.com" target="_blank">FastAPI Docs</a>
+        <a href="https://github.com/langchain-ai/langgraph" target="_blank">LangGraph</a>
+        <a href="https://platform.openai.com/docs" target="_blank">OpenAI API</a>
+        <a href="https://docs.pinecone.io" target="_blank">Pinecone</a>
+        <a href="https://owasp.org/Top10" target="_blank">OWASP Top 10</a>
+      </div>
+    </div>
+    <div>
+      <div class="footer-col-title">Project</div>
+      <div class="footer-links">
+        <a href="#how">Pipeline</a>
+        <a href="#features">Features</a>
+        <a href="#scan">Execute Scan</a>
+        <a href="#">GitHub Repo</a>
+        <a href="#">Documentation</a>
+      </div>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <div class="footer-copy">© 2025 LUMINA PROJECT — BCA FINAL YEAR PROJECT — DEPARTMENT OF COMPUTER SCIENCE</div>
+    <div class="footer-version">v2.0</div>
+  </div>
+</footer>
+
+<script>
+  // Loader
+  window.addEventListener('load', async () => {
+    // Auth Check
+    try {
+      const res = await fetch('/api/auth/me');
+      const data = await res.json();
+      const container = document.getElementById('authContainer');
+      
+      if (data.authenticated) {
+        container.innerHTML = `
+          <div class="nav-user">
+            <img src="${data.user.avatar}" class="user-avatar" alt="Avatar">
+            <span class="user-name">${data.user.login}</span>
+            <a href="/api/auth/logout" class="btn-logout">LOGOUT</a>
+          </div>
+        `;
+        const mainCta = document.querySelector('.btn-primary span');
+        if (mainCta) mainCta.textContent = "Start New Audit";
+      }
+    } catch (e) {
+      console.error("Auth check failed", e);
+    }
+
+    // Error handle
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('error') === 'auth_failed') {
+      alert("Authentication failed. Please try again.");
+    }
+
+    setTimeout(() => {
+      document.getElementById('loader').classList.add('gone');
+    }, 2000);
+  });
+
+  // Cursor
+  const cursor = document.getElementById('cursor');
+  const follower = document.getElementById('cursorFollower');
+  let mx = 0, my = 0, fx = 0, fy = 0;
+
+  document.addEventListener('mousemove', e => {
+    mx = e.clientX; my = e.clientY;
+    cursor.style.transform = `translate(${mx - 6}px, ${my - 6}px)`;
+  });
+
+  function animateFollower() {
+    fx += (mx - fx - 18) * 0.12;
+    fy += (my - fy - 18) * 0.12;
+    follower.style.transform = `translate(${fx}px, ${fy}px)`;
+    requestAnimationFrame(animateFollower);
+  }
+  animateFollower();
+
+  // Fade-up observer
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+
+  // Hero image fallback (will use uploaded image if served via backend)
+  const heroImg = document.getElementById('heroImg');
+  heroImg.onerror = function() {
+    this.parentElement.style.background = 'linear-gradient(135deg, #1a1816 0%, #0a0a0a 100%)';
+    this.style.display = 'none';
+  };
+
+  // ─────────────────────────────────────────────────
+  // LUMINA Frontend Logic — Fixed & Complete
+  // ─────────────────────────────────────────────────
+
+  let ws = null;
+  let _pendingPrData = null;  // holds {repo_url, report} until user clicks Create PR
+
+  // ── Scan ──────────────────────────────────────────
+
+  async function startScan() {
+    const repo = document.getElementById('repoInput').value.trim();
+    if (!repo) { alert('Please enter a GitHub repository URL.'); return; }
+
+    // Reset UI
+    const panel       = document.getElementById('progressPanel');
+    const prResult    = document.getElementById('prResult');
+    const createPRBtn = document.getElementById('createPRBtn');
+    const reportSec   = document.getElementById('reportSection');
+    panel.classList.add('active');
+    prResult.classList.remove('active');
+    createPRBtn.classList.remove('visible');
+    reportSec.classList.remove('active');
+    document.getElementById('termLog').innerHTML = '<span class="log-line">LUMINA v2.0 initializing...</span>';
+
+    // Reset stage indicators
+    ['s1','s2','s3','s4','s5','s6'].forEach(id => {
+      const el = document.getElementById(id);
+      el.className = 'stage-row';
+      el.querySelector('.check').textContent = '';
+    });
+
+    document.getElementById('progressStatus').textContent = 'CONNECTING...';
+    addLog('[Step 0] Connecting to LUMINA backend...');
+
+    _pendingPrData = null;
+
+    try {
+      const res = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ repo_url: repo })
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(err.detail || `HTTP ${res.status}`);
+      }
+
+      addLog('[Step 1] Stream connected — pipeline running...');
+      document.getElementById('progressStatus').textContent = 'RUNNING...';
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop(); // Keep partial line
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed.startsWith(':')) continue; // Skip pings
+
+          if (trimmed.startsWith('data: ')) {
+            try {
+              const msg = JSON.parse(trimmed.substring(6));
+              handleEvent(msg, repo);
+            } catch(e) {
+              console.warn('Parse error:', e, trimmed);
+            }
+          }
+        }
+      }
+
+      addLog('Analysis session complete.', 'success');
+      if (document.getElementById('progressStatus').textContent === 'RUNNING...') {
+        document.getElementById('progressStatus').textContent = 'COMPLETE';
+      }
+
+    } catch(err) {
+      addLog(`Error: ${err.message}`, 'error');
+      document.getElementById('progressStatus').textContent = 'ERROR';
+    }
+  }
+
+
+  // ── Event Handler ─────────────────────────────────
+
+  const stageMap = {
+    'crawl': 's1', 'index': 's2', 'architecture': 's3',
+    'scan': 's4',  'fix': 's5',   'pr': 's6'
+  };
+
+  const stageLabels = {
+    'crawl': 'Step 1', 'index': 'Step 2', 'architecture': 'Step 3',
+    'scan':  'Step 4', 'fix':   'Step 5', 'pr': 'Step 6'
+  };
+
+  function handleEvent(msg, repoUrl) {
+    const { type, stage, message, pr_url, error, report } = msg;
+
+    if (type === 'stage_start' && stage && stageMap[stage]) {
+      const el = document.getElementById(stageMap[stage]);
+      el.className = 'stage-row active';
+      addLog(`[${stageLabels[stage]}] ${message || stage}`, 'success');
+    }
+
+    if (type === 'stage_done' && stage && stageMap[stage]) {
+      const el = document.getElementById(stageMap[stage]);
+      el.className = 'stage-row done';
+      el.querySelector('.check').textContent = '✓';
+    }
+
+    if (type === 'log' && message) {
+      addLog(message);
+    }
+
+    if (type === 'complete') {
+      addLog(`[Pipeline Complete] ${msg.vulnerabilities_found || 0} vulns | ${msg.fixes_applied || 0} fixes`, 'success');
+      document.getElementById('progressStatus').textContent = 'COMPLETE';
+
+      // Render structured report
+      if (report) {
+        renderReport(report);
+      }
+
+      // Store PR data and show "Create Pull Request" button
+      // (Stage 6 already created the PR in the backend, but we wait for
+      //  user confirmation before redirecting — per spec the button triggers redirect)
+      if (pr_url) {
+        _pendingPrData = { pr_url, repo_url: repoUrl, report };
+        document.getElementById('prLink').href = pr_url;
+        document.getElementById('prLink').textContent = `View Pull Request → ${pr_url}`;
+        document.getElementById('prResult').classList.add('active');
+        addLog(`PR ready: ${pr_url}`, 'success');
+      }
+
+      // Show "Create Pull Request" button regardless (to trigger redirect)
+      document.getElementById('createPRBtn').classList.add('visible');
+      document.getElementById('createPRBtnText').textContent =
+        pr_url ? '🚀 Open Pull Request on GitHub' : '🚀 Create Pull Request';
+    }
+
+    if (type === 'error') {
+      addLog(`[ERROR] ${error || 'Unknown pipeline error'}`, 'error');
+      document.getElementById('progressStatus').textContent = 'ERROR';
+    }
+  }
+
+  // ── Create PR / Redirect ──────────────────────────
+
+  async function createPullRequest() {
+    const btn = document.getElementById('createPRBtn');
+    btn.disabled = true;
+
+    // If the backend already created the PR (has pr_url), just redirect
+    if (_pendingPrData && _pendingPrData.pr_url) {
+      addLog('Redirecting to GitHub Pull Request...', 'success');
+      document.getElementById('createPRBtnText').textContent = 'Redirecting...';
+      setTimeout(() => {
+        window.open(_pendingPrData.pr_url, '_blank');
+        btn.disabled = false;
+        document.getElementById('createPRBtnText').textContent = '🚀 Open Pull Request on GitHub';
+      }, 600);
+      return;
+    }
+
+    // If pipeline ran without auto-PR (e.g. no fixes), notify user
+    addLog('No pull request was generated (no fixes to apply).', 'warn');
+    btn.disabled = false;
+  }
+
+  // ── Report Renderer ───────────────────────────────
+
+  function renderReport(report) {
+    const section   = document.getElementById('reportSection');
+    const vulnList  = document.getElementById('reportVulnList');
+    const summary   = document.getElementById('reportSummary');
+    const vulns     = report.vulnerabilities || [];
+    const fixes     = report.fixes || [];
+    const arch      = report.architecture || {};
+
+    // Header counts
+    document.getElementById('reportVulnCount').textContent = vulns.length;
+    document.getElementById('reportFixCount').textContent  = fixes.length;
+    document.getElementById('reportFileCount').textContent = report.files_scanned || 0;
+
+    // Summary cards
+    const severityCounts = {};
+    vulns.forEach(v => {
+      const s = v.severity || 'UNKNOWN';
+      severityCounts[s] = (severityCounts[s] || 0) + 1;
+    });
+
+    const techStack = (arch.tech_stack || []).slice(0, 5).join(', ') || '—';
+    const components = Object.keys(arch.components || {}).length;
+
+    summary.innerHTML = `
+      ${Object.entries(severityCounts).map(([sev, cnt]) => `
+        <div class="summary-card">
+          <div class="summary-card-label">${sev}</div>
+          <div class="summary-card-value severity-${sev.toLowerCase()}">${cnt}</div>
+        </div>
+      `).join('')}
+      <div class="summary-card">
+        <div class="summary-card-label">Tech Stack</div>
+        <div class="summary-card-value" style="font-size:10px;">${techStack}</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-card-label">Components</div>
+        <div class="summary-card-value">${components}</div>
+      </div>
+    `;
+
+    // Fix map keyed by file+line
+    const fixMap = {};
+    fixes.forEach(f => { fixMap[`${f.file}:${f.line}`] = f; });
+
+    // Vulnerability cards with before/after diffs
+    if (vulns.length === 0) {
+      vulnList.innerHTML = '<div class="no-issues-msg">✓ No vulnerabilities detected</div>';
+    } else {
+      vulnList.innerHTML = vulns.map((v, i) => {
+        const fix = fixMap[`${v.file}:${v.line}`];
+        const sev = (v.severity || 'UNKNOWN').toLowerCase();
+        const sevClass = `severity-${sev}`;
+        const diffHtml = fix ? `
+          <div class="code-diff">
+            <div class="code-block">
+              <div class="code-block-label before">Before (vulnerable)</div>
+              <pre>${escHtml(fix.original || v.code || '')}</pre>
+            </div>
+            <div class="code-block">
+              <div class="code-block-label after">After (fixed)</div>
+              <pre>${escHtml(fix.patched_line || '')}</pre>
+            </div>
+          </div>
+          <div style="margin-top:8px;font-size:9px;color:rgba(255,255,255,0.4);">
+            ✓ ${escHtml(fix.explanation || fix.diff_summary || 'Fix applied')}
+          </div>
+        ` : `
+          <div class="code-block" style="margin-top:10px;">
+            <div class="code-block-label before">Vulnerable Code</div>
+            <pre>${escHtml(v.code || '')}</pre>
+          </div>
+        `;
+
+        return `
+          <div class="vuln-card">
+            <div class="vuln-header">
+              <span class="vuln-badge ${sevClass}">${v.severity || 'UNKNOWN'}</span>
+              <span class="vuln-name">${escHtml(v.confirmed_type || v.type || 'Unknown')}</span>
+              ${v.cwe ? `<span class="vuln-file">${escHtml(v.cwe)}</span>` : ''}
+              <span class="vuln-file">${escHtml(v.file)}:${v.line}</span>
+            </div>
+            <div class="vuln-body">
+              <div class="vuln-detail">${escHtml(v.explanation || v.detail || '')}</div>
+              ${diffHtml}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    section.classList.add('active');
+    // Scroll to report
+    setTimeout(() => section.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
+  }
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Log helper ─────────────────────────────────────
+
+  function addLog(text, cls = '') {
+    const log = document.getElementById('termLog');
+    const span = document.createElement('span');
+    span.className = 'log-line' + (cls ? ` log-${cls}` : '');
+    span.textContent = text;
+    log.appendChild(span);
+    log.scrollTop = log.scrollHeight;
+  }
+</script>
+<script type="module">
+import * as THREE from "https://cdn.skypack.dev/three@0.136.0";
+import {OrbitControls} from "https://cdn.skypack.dev/three@0.136.0/examples/jsm/controls/OrbitControls";
+
+let container = document.getElementById("scanAnimationContainer");
+let width = container.clientWidth;
+let height = container.clientHeight;
+
+let scene = new THREE.Scene();
+scene.background = new THREE.Color(0x160016);
+let camera = new THREE.PerspectiveCamera(60, width / height, 1, 1000);
+camera.position.set(0, 4, 21);
+let renderer = new THREE.WebGLRenderer({ alpha: true });
+renderer.setSize(width, height);
+container.appendChild(renderer.domElement);
+
+window.addEventListener("resize", event => {
+  width = container.clientWidth;
+  height = container.clientHeight;
+  camera.aspect = width / height;
+  camera.updateProjectionMatrix();
+  renderer.setSize(width, height);
+});
+
+let controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.enablePan = false;
+
+let gu = {
+  time: {value: 0}
+}
+
+let sizes = [];
+let shift = [];
+let pushShift = () => {
+  shift.push(
+    Math.random() * Math.PI, 
+    Math.random() * Math.PI * 2, 
+    (Math.random() * 0.9 + 0.1) * Math.PI * 0.1,
+    Math.random() * 0.9 + 0.1
+  );
+}
+let pts = new Array(50000).fill().map(p => {
+  sizes.push(Math.random() * 1.5 + 0.5);
+  pushShift();
+  return new THREE.Vector3().randomDirection().multiplyScalar(Math.random() * 0.5 + 9.5);
+})
+for(let i = 0; i < 100000; i++){
+  let r = 10, R = 40;
+  let rand = Math.pow(Math.random(), 1.5);
+  let radius = Math.sqrt(R * R * rand + (1 - rand) * r * r);
+  pts.push(new THREE.Vector3().setFromCylindricalCoords(radius, Math.random() * 2 * Math.PI, (Math.random() - 0.5) * 2 ));
+  sizes.push(Math.random() * 1.5 + 0.5);
+  pushShift();
+}
+
+let g = new THREE.BufferGeometry().setFromPoints(pts);
+g.setAttribute("sizes", new THREE.Float32BufferAttribute(sizes, 1));
+g.setAttribute("shift", new THREE.Float32BufferAttribute(shift, 4));
+let m = new THREE.PointsMaterial({
+  size: 0.125,
+  transparent: true,
+  depthTest: false,
+  blending: THREE.AdditiveBlending,
+  onBeforeCompile: shader => {
+    shader.uniforms.time = gu.time;
+    shader.vertexShader = `
+      uniform float time;
+      attribute float sizes;
+      attribute vec4 shift;
+      varying vec3 vColor;
+      ${shader.vertexShader}
+    `.replace(
+      `gl_PointSize = size;`,
+      `gl_PointSize = size * sizes;`
+    ).replace(
+      `#include <color_vertex>`,
+      `#include <color_vertex>
+        float d = length(abs(position) / vec3(40., 10., 40));
+        d = clamp(d, 0., 1.);
+        vColor = mix(vec3(227., 155., 0.), vec3(100., 50., 255.), d) / 255.;
+      `
+    ).replace(
+      `#include <begin_vertex>`,
+      `#include <begin_vertex>
+        float t = time;
+        float moveT = mod(shift.x + shift.z * t, PI2);
+        float moveS = mod(shift.y + shift.z * t, PI2);
+        transformed += vec3(cos(moveS) * sin(moveT), cos(moveT), sin(moveS) * sin(moveT)) * shift.w;
+      `
+    );
+    shader.fragmentShader = `
+      varying vec3 vColor;
+      ${shader.fragmentShader}
+    `.replace(
+      `#include <clipping_planes_fragment>`,
+      `#include <clipping_planes_fragment>
+        float d = length(gl_PointCoord.xy - 0.5);
+      `
+    ).replace(
+      `vec4 diffuseColor = vec4( diffuse, opacity );`,
+      `vec4 diffuseColor = vec4( vColor, smoothstep(0.5, 0.1, d) );`
+    );
+  }
+});
+let p = new THREE.Points(g, m);
+p.rotation.order = "ZYX";
+p.rotation.z = 0.2;
+scene.add(p)
+
+let clock = new THREE.Clock();
+
+renderer.setAnimationLoop(() => {
+  if(!container.clientWidth) return;
+  controls.update();
+  let t = clock.getElapsedTime() * 0.5;
+  gu.time.value = t * Math.PI;
+  p.rotation.y = t * 0.05;
+  renderer.render(scene, camera);
+});
+</script>
+</body>
+</html>
