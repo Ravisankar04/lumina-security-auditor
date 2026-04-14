@@ -1,7 +1,7 @@
-\"\"\"
+"""
 LUMINA - Autonomous AI Security Auditor v2.0
 FastAPI Backend with SSE (Server-Sent Events) Streaming for Vercel
-\"\"\"
+"""
 
 import os
 import asyncio
@@ -36,8 +36,8 @@ oauth.register(
     client_kwargs={'scope': 'user:email repo'},
 )
 
-SECRET_KEY = os.environ.get(\"SESSION_SECRET\", \"super-secret-lumina-key\")
-ALGORITHM = \"HS256\"
+SECRET_KEY = os.environ.get("SESSION_SECRET", "super-secret-lumina-key")
+ALGORITHM = "HS256"
 
 def create_access_token(data: dict):
     return jwt.encode(data, SECRET_KEY, algorithm=ALGORITHM)
@@ -48,8 +48,8 @@ def decode_access_token(token: str):
     except JWTError:
         return None
 
-logging.basicConfig(level=logging.INFO, format=\"%(asctime)s | %(levelname)s | %(message)s\")
-logger = logging.getLogger(\"lumina\")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
+logger = logging.getLogger("lumina")
 
 # ────────────────────────────────────────────────
 # App Lifecycle
@@ -57,22 +57,25 @@ logger = logging.getLogger(\"lumina\")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info(\"LUMINA v2.0 starting up...\")
+    logger.info("LUMINA v2.0 starting up...")
     yield
-    logger.info(\"LUMINA shutting down.\")
+    logger.info("LUMINA shutting down.")
 
 app = FastAPI(
-    title=\"LUMINA — Autonomous AI Security Auditor\",
-    version=\"2.0.0\",
+    title="LUMINA — Autonomous AI Security Auditor",
+    version="2.0.0",
     lifespan=lifespan,
 )
 
+# Vercel-friendly entry point
+application = app
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[\"*\"],
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=[\"*\"],
-    allow_headers=[\"*\"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # ────────────────────────────────────────────────
@@ -81,23 +84,23 @@ app.add_middleware(
 
 FRONTEND_DIR = Path(__file__).parent
 # Vercel handles static files via routes, but for local testing:
-app.mount(\"/static\", StaticFiles(directory=str(FRONTEND_DIR)), name=\"static\")
+app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
-@app.get(\"/\")
+@app.get("/")
 async def root():
-    index = FRONTEND_DIR / \"index.html\"
+    index = FRONTEND_DIR / "index.html"
     if index.exists():
         return FileResponse(str(index))
-    return JSONResponse({\"status\": \"LUMINA API running\", \"version\": \"2.0.0\"})
+    return JSONResponse({"status": "LUMINA API running", "version": "2.0.0"})
 
-@app.get(\"/hero.png\")
+@app.get("/hero.png")
 async def hero_image():
-    \"\"\"Serve the hero image for the frontend.\"\"\"
-    for name in [\"hero.png\", \"create_an_image_202604121238.png\"]:
+    """Serve the hero image for the frontend."""
+    for name in ["hero.png", "create_an_image_202604121238.png"]:
         path = FRONTEND_DIR / name
         if path.exists():
             return FileResponse(str(path))
-    raise HTTPException(status_code=404, detail=\"Hero image not found\")
+    raise HTTPException(status_code=404, detail="Hero image not found")
 
 # ────────────────────────────────────────────────
 # Pydantic Models
@@ -110,18 +113,18 @@ class AnalyzeRequest(BaseModel):
 # Auth Routes
 # ────────────────────────────────────────────────
 
-@app.get(\"/api/auth/login\")
+@app.get("/api/auth/login")
 async def login(request: Request):
-    \"\"\"Initiate GitHub OAuth flow.\"\"\"
+    """Initiate GitHub OAuth flow."""
     redirect_uri = str(request.url_for('auth_callback'))
     # In Vercel, sometimes url_for returns http instead of https
-    if \"vercel.app\" in redirect_uri:
-        redirect_uri = redirect_uri.replace(\"http://\", \"https://\")
+    if "vercel.app" in redirect_uri:
+        redirect_uri = redirect_uri.replace("http://", "https://")
     return await oauth.github.authorize_redirect(request, redirect_uri)
 
-@app.get(\"/api/auth/callback\")
+@app.get("/api/auth/callback")
 async def auth_callback(request: Request):
-    \"\"\"Handle GitHub OAuth callback.\"\"\"
+    """Handle GitHub OAuth callback."""
     try:
         token = await oauth.github.authorize_access_token(request)
         user_info = await oauth.github.get('user', token=token)
@@ -129,100 +132,100 @@ async def auth_callback(request: Request):
         
         # Create a session token
         session_data = {
-            \"sub\": user_data[\"login\"],
-            \"name\": user_data.get(\"name\") or user_data[\"login\"],
-            \"avatar\": user_data.get(\"avatar_url\"),
-            \"token\": token[\"access_token\"]
+            "sub": user_data["login"],
+            "name": user_data.get("name") or user_data["login"],
+            "avatar": user_data.get("avatar_url"),
+            "token": token["access_token"]
         }
         jwt_token = create_access_token(session_data)
         
-        response = RedirectResponse(url=\"/\")
+        response = RedirectResponse(url="/")
         response.set_cookie(
-            key=\"lumina_session\",
+            key="lumina_session",
             value=jwt_token,
             httponly=True,
             max_age=60 * 60 * 24 * 7, # 7 days
-            samesite=\"lax\",
+            samesite="lax",
             secure=True
         )
         return response
     except Exception as e:
-        logger.error(f\"Auth error: {e}\")
-        return RedirectResponse(url=\"/?error=auth_failed\")
+        logger.error(f"Auth error: {e}")
+        return RedirectResponse(url="/?error=auth_failed")
 
-@app.get(\"/api/auth/me\")
+@app.get("/api/auth/me")
 async def get_me(request: Request):
-    \"\"\"Get current user info.\"\"\"
-    session_token = request.cookies.get(\"lumina_session\")
+    """Get current user info."""
+    session_token = request.cookies.get("lumina_session")
     if not session_token:
-        return JSONResponse({\"authenticated\": False})
+        return JSONResponse({"authenticated": False})
     
     payload = decode_access_token(session_token)
     if not payload:
-        return JSONResponse({\"authenticated\": False})
+        return JSONResponse({"authenticated": False})
     
     return {
-        \"authenticated\": True,
-        \"user\": {
-            \"login\": payload[\"sub\"],
-            \"name\": payload[\"name\"],
-            \"avatar\": payload[\"avatar\"]
+        "authenticated": True,
+        "user": {
+            "login": payload["sub"],
+            "name": payload["name"],
+            "avatar": payload["avatar"]
         }
     }
 
-@app.get(\"/api/auth/logout\")
+@app.get("/api/auth/logout")
 async def logout():
-    \"\"\"Clear session cookie.\"\"\"
-    response = RedirectResponse(url=\"/\")
-    response.delete_cookie(\"lumina_session\")
+    """Clear session cookie."""
+    response = RedirectResponse(url="/")
+    response.delete_cookie("lumina_session")
     return response
 
 # ────────────────────────────────────────────────
 # API Routes (SSE)
 # ────────────────────────────────────────────────
 
-@app.get(\"/health\")
+@app.get("/health")
 async def health():
-    return {\"status\": \"online\", \"version\": \"2.0.0\"}
+    return {"status": "online", "version": "2.0.0"}
 
-@app.post(\"/api/analyze\")
+@app.post("/api/analyze")
 async def analyze(req: AnalyzeRequest, request: Request):
-    \"\"\"
+    """
     Starts the analysis and returns a Server-Sent Events (SSE) stream.
     Uses user's token if logged in.
-    \"\"\"
+    """
     repo_url = req.repo_url.strip()
     
     # Check for user token in session
     user_token = None
-    session_token = request.cookies.get(\"lumina_session\")
+    session_token = request.cookies.get("lumina_session")
     if session_token:
         payload = decode_access_token(session_token)
         if payload:
-            user_token = payload.get(\"token\")
+            user_token = payload.get("token")
 
-    if not repo_url.startswith(\"https://github.com/\"):
+    if not repo_url.startswith("https://github.com/"):
         raise HTTPException(
             status_code=400,
-            detail=\"Invalid GitHub URL. Must start with https://github.com/\"
+            detail="Invalid GitHub URL. Must start with https://github.com/"
         )
 
-    logger.info(f\"New scan request: {repo_url} (Auth: {'Yes' if user_token else 'No'})\")
+    logger.info(f"New scan request: {repo_url} (Auth: {'Yes' if user_token else 'No'})")
 
     return StreamingResponse(
         event_generator(repo_url, user_token),
-        media_type=\"text/event-stream\",
+        media_type="text/event-stream",
         headers={
-            \"Cache-Control\": \"no-cache\",
-            \"Connection\": \"keep-alive\",
-            \"X-Accel-Buffering\": \"no\",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
         }
     )
 
 async def event_generator(repo_url: str, user_token: Optional[str] = None):
-    \"\"\"
+    """
     Generator that runs the pipeline and yields SSE formatted data.
-    \"\"\"
+    """
     queue = asyncio.Queue()
 
     async def emit_wrapper(event: dict):
@@ -235,9 +238,9 @@ async def event_generator(repo_url: str, user_token: Optional[str] = None):
         try:
             # Get event from queue with timeout for keepalive
             event = await asyncio.wait_for(queue.get(), timeout=1.0)
-            yield f\"data: {json.dumps(event)}\\n\\n\"
+            yield f"data: {json.dumps(event)}\n\n"
             
-            if event.get(\"type\") in (\"complete\", \"error\"):
+            if event.get("type") in ("complete", "error"):
                 break
         except asyncio.TimeoutError:
             # Send keep-alive ping
@@ -246,99 +249,99 @@ async def event_generator(repo_url: str, user_token: Optional[str] = None):
                 try:
                     await pipeline_task
                 except Exception as e:
-                    yield f\"data: {json.dumps({'type': 'error', 'error': str(e)})}\\n\\n\"
+                    yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
                 break
             # Vercel and browsers need regular data to keep the connection alive
-            yield \": ping\\n\\n\"
+            yield ": ping\n\n"
         except Exception as e:
-            logger.error(f\"Stream generation error: {e}\")
-            yield f\"data: {json.dumps({'type': 'error', 'error': str(e)})}\\n\\n\"
+            logger.error(f"Stream generation error: {e}")
+            yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
             break
 
 async def run_pipeline_logic(repo_url: str, emit_fn, user_token: Optional[str] = None):
-    \"\"\"
+    """
     Logic for running the pipeline (orchestrator or demo).
-    \"\"\"
+    """
     try:
         from orchestrator import LuminaPipeline
         pipeline = LuminaPipeline(emit_fn=emit_fn, user_token=user_token)
         await pipeline.run(repo_url)
 
     except (ImportError, ModuleNotFoundError):
-        logger.warning(\"orchestrator.py not found or dependencies missing — running demo mode\")
+        logger.warning("orchestrator.py not found or dependencies missing — running demo mode")
         await _demo_pipeline(emit_fn)
 
     except Exception as e:
-        logger.error(f\"Pipeline execution error: {e}\")
-        await emit_fn({\"type\": \"error\", \"error\": str(e)})
+        logger.error(f"Pipeline execution error: {e}")
+        await emit_fn({"type": "error", "error": str(e)})
 
 async def _demo_pipeline(emit):
-    \"\"\"Simulated pipeline for testing/demo.\"\"\"
+    """Simulated pipeline for testing/demo."""
     stages = [
-        (\"crawl\",        \"Repository Ingestion\",     \"Crawling GitHub repository...\"),
-        (\"index\",        \"Semantic Indexing\",         \"Building Pinecone embeddings...\"),
-        (\"architecture\", \"Architecture Mapping\",      \"Analyzing system architecture with GPT-4o...\"),
-        (\"scan\",         \"Vulnerability Detection\",   \"Running dual-phase security scan...\"),
-        (\"fix\",          \"Fix Synthesis\",             \"Generating remediation patches...\"),
-        (\"pr\",           \"Pull Request Creation\",     \"Creating GitHub pull request...\"),
+        ("crawl",        "Repository Ingestion",     "Crawling GitHub repository..."),
+        ("index",        "Semantic Indexing",         "Building Pinecone embeddings..."),
+        ("architecture", "Architecture Mapping",      "Analyzing system architecture with GPT-4o..."),
+        ("scan",         "Vulnerability Detection",   "Running dual-phase security scan..."),
+        ("fix",          "Fix Synthesis",             "Generating remediation patches..."),
+        ("pr",           "Pull Request Creation",     "Creating GitHub pull request..."),
     ]
 
     logs = {
-        \"crawl\": [\"Fetching file tree...\", \"Found 47 files\", \"Parallel crawl complete\"],
-        \"index\": [\"Chunking code files...\", \"Generating embeddings...\", \"Upserting to Pinecone...\"],
-        \"architecture\": [\"Retrieving top-5 chunks...\", \"Mapping components...\", \"Architecture graph built\"],
-        \"scan\": [\"Running regex pre-filter...\", \"3 patterns matched\", \"LLM verification in progress...\"],
-        \"fix\": [\"Synthesizing fix for CVE-2023-4863...\", \"Generating SQL injection patch...\", \"Patches ready\"],
-        \"pr\": [\"Forking repository...\", \"Creating security branch...\", \"Committing patches...\", \"Opening PR...\"],
+        "crawl": ["Fetching file tree...", "Found 47 files", "Parallel crawl complete"],
+        "index": ["Chunking code files...", "Generating embeddings...", "Upserting to Pinecone..."],
+        "architecture": ["Retrieving top-5 chunks...", "Mapping components...", "Architecture graph built"],
+        "scan": ["Running regex pre-filter...", "3 patterns matched", "LLM verification in progress..."],
+        "fix": ["Synthesizing fix for CVE-2023-4863...", "Generating SQL injection patch...", "Patches ready"],
+        "pr": ["Forking repository...", "Creating security branch...", "Committing patches...", "Opening PR..."],
     }
 
     for stage_key, stage_name, start_msg in stages:
-        await emit({\"type\": \"stage_start\", \"stage\": stage_key, \"message\": start_msg})
+        await emit({"type": "stage_start", "stage": stage_key, "message": start_msg})
         await asyncio.sleep(0.5)
 
         for log_line in logs.get(stage_key, []):
-            await emit({\"type\": \"log\", \"message\": log_line})
+            await emit({"type": "log", "message": log_line})
             await asyncio.sleep(0.3) 
 
-        await emit({\"type\": \"stage_done\", \"stage\": stage_key})
+        await emit({"type": "stage_done", "stage": stage_key})
         await asyncio.sleep(0.2)
 
     await emit({
-        \"type\": \"complete\",
-        \"pr_url\": \"https://github.com/demo-org/demo-repo/pull/42\",
-        \"message\": \"Security audit complete. Pull request created.\",
-        \"vulnerabilities_found\": 3,
-        \"fixes_applied\": 3,
-        \"report\": {
-            \"files_scanned\": 47,
-            \"vulnerabilities\": [
+        "type": "complete",
+        "pr_url": "https://github.com/demo-org/demo-repo/pull/42",
+        "message": "Security audit complete. Pull request created.",
+        "vulnerabilities_found": 3,
+        "fixes_applied": 3,
+        "report": {
+            "files_scanned": 47,
+            "vulnerabilities": [
                 {
-                    \"file\": \"app/auth.py\", \"line\": 34,
-                    \"type\": \"Hardcoded Secret\", \"confirmed_type\": \"Hardcoded Secret\",
-                    \"severity\": \"CRITICAL\",
-                    \"code\": 'SECRET_KEY = \"hardcoded-secret-abc123\"',
-                    \"detail\": \"Hardcoded credential in source code\",
-                    \"explanation\": \"Secret key is hardcoded directly in source\",
-                    \"cwe\": \"CWE-798\", \"verified\": True,
+                    "file": "app/auth.py", "line": 34,
+                    "type": "Hardcoded Secret", "confirmed_type": "Hardcoded Secret",
+                    "severity": "CRITICAL",
+                    "code": 'SECRET_KEY = "hardcoded-secret-abc123"',
+                    "detail": "Hardcoded credential in source code",
+                    "explanation": "Secret key is hardcoded directly in source",
+                    "cwe": "CWE-798", "verified": True,
                 }
             ],
-            \"fixes\": [
+            "fixes": [
                 {
-                    \"file\": \"app/auth.py\", \"line\": 34,
-                    \"original\": 'SECRET_KEY = \"hardcoded-secret-abc123\"',
-                    \"patched_line\": \"SECRET_KEY = os.environ.get('SECRET_KEY')\",
-                    \"explanation\": \"Use environment variable\",
-                    \"diff_summary\": \"Hide secret\",
-                    \"severity\": \"CRITICAL\", \"vuln_type\": \"Hardcoded Secret\",
+                    "file": "app/auth.py", "line": 34,
+                    "original": 'SECRET_KEY = "hardcoded-secret-abc123"',
+                    "patched_line": "SECRET_KEY = os.environ.get('SECRET_KEY')",
+                    "explanation": "Use environment variable",
+                    "diff_summary": "Hide secret",
+                    "severity": "CRITICAL", "vuln_type": "Hardcoded Secret",
                 }
             ],
-            \"architecture\": {
-                \"tech_stack\": [\"Python\", \"FastAPI\"],
-                \"components\": {\"api\": \"REST API\"},
+            "architecture": {
+                "tech_stack": ["Python", "FastAPI"],
+                "components": {"api": "REST API"},
             },
         },
     })
 
-if __name__ == \"__main__\":
+if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(\"server:app\", host=\"0.0.0.0\", port=8000, reload=True)
+    uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=True)
