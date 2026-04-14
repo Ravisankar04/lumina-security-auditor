@@ -149,6 +149,7 @@ async def event_generator(repo_url: str):
     STABILIZED GENERATOR: Uses purely in-lined demo logic to avoid any build-time or runtime import errors 
     during the guide presentation. This ensures a 100% success rate for the demo.
     """
+    pr_link = f"{repo_url.rstrip('/')}/pull/88"
     # 1. Start Signal
     yield f"data: {json.dumps({'type': 'log', 'message': 'LUMINA engine v2.0.3 connected. Initializing audit sequence...'})}\n\n"
     await asyncio.sleep(1)
@@ -173,7 +174,6 @@ async def event_generator(repo_url: str):
         yield f"data: {json.dumps({'type': 'stage_done', 'stage': stage_key})}\n\n"
         await asyncio.sleep(0.3)
 
-    pr_link = f"{repo_url.rstrip('/')}/pull/88"
     report_data = {
         "type": "complete",
         "pr_url": pr_link,
