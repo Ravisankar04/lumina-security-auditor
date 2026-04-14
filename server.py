@@ -58,6 +58,18 @@ logger = logging.getLogger("lumina")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("LUMINA v2.0 starting up...")
+    
+    # Check for critical environment variables
+    missing = []
+    if not os.environ.get("GITHUB_CLIENT_ID"): missing.append("GITHUB_CLIENT_ID")
+    if not os.environ.get("GITHUB_CLIENT_SECRET"): missing.append("GITHUB_CLIENT_SECRET")
+    
+    if missing:
+        logger.error(f"CRITICAL: Missing environment variables: {', '.join(missing)}")
+        logger.error("OAuth login will fail until these are set in Vercel/local .env")
+    else:
+        logger.info("GitHub OAuth credentials detected.")
+        
     yield
     logger.info("LUMINA shutting down.")
 
@@ -120,11 +132,26 @@ class AnalyzeRequest(BaseModel):
 @app.get("/api/auth/login")
 async def login(request: Request):
     """Initiate GitHub OAuth flow."""
+    client_id = os.environ.get('GITHUB_CLIENT_ID')
+    if not client_id or client_id.startswith("your_"):
+        return JSONResponse(
+            status_code=400,
+            content={"error": "Missing Configuration", "detail": "GITHUB_CLIENT_ID is not configured on the server."}
+        )
+
     redirect_uri = str(request.url_for('auth_callback'))
     # In Vercel, sometimes url_for returns http instead of https
     if "vercel.app" in redirect_uri:
         redirect_uri = redirect_uri.replace("http://", "https://")
-    return await oauth.github.authorize_redirect(request, redirect_uri)
+    
+    try:
+        return await oauth.github.authorize_redirect(request, redirect_uri)
+    except Exception as e:
+        logger.error(f"Login redirect failed: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"error": "OAuth Error", "detail": str(e)}
+        )
 
 @app.get("/api/auth/callback")
 async def auth_callback(request: Request):
